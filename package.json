@@ -1,0 +1,20 @@
+{
+  "name": "generate-star-history",
+  "version": "1.0.0",
+  "description": "Generates a star history chart for a GitHub repository",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Swastik Pal",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.17.0",
+      "onFail": "download"
+    }
+  },
+  "type": "module"
+}
