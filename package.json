@@ -32,13 +32,6 @@
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   },
-  "pnpm": {
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "typescript": "7"
-      }
-    }
-  },
   "lint-staged": {
     "*.ts": [
       "prettier --write"

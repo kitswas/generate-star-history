@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { processStargazers, renderSvgChart } from './index.js';
+import { processStargazers, renderSvgChart } from './chart.js';
 
 describe('processStargazers', () => {
   it('handles empty arrays', () => {
@@ -42,9 +42,7 @@ describe('renderSvgChart', () => {
     expect(svg).toContain('<svg');
     expect(svg).toContain('class="line"');
     expect(svg).toContain('class="area"');
-    // Ensure dark theme colors are applied directly
     expect(svg).toContain('fill: #0d1117');
-    // Ensure date labels are present
     expect(svg).toContain('2024-01-01');
     expect(svg).toContain('2024-01-02');
   });

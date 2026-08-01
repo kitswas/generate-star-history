@@ -29273,8 +29273,8 @@ var __webpack_exports__ = {};
 
 // EXPORTS
 __nccwpck_require__.d(__webpack_exports__, {
-  _: () => (/* binding */ processStargazers),
-  Z: () => (/* binding */ renderSvgChart)
+  _: () => (/* reexport */ processStargazers),
+  Z: () => (/* reexport */ renderSvgChart)
 });
 
 ;// CONCATENATED MODULE: external "os"
@@ -36927,23 +36927,74 @@ function getOctokit(token, options, ...additionalPlugins) {
 const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs/promises");
 ;// CONCATENATED MODULE: external "node:path"
 const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
-;// CONCATENATED MODULE: ./dist-tsc/index.js
+;// CONCATENATED MODULE: ./dist-tsc/fetcher.js
 
+/**
+ * Calculates page numbers to sample given total pages
+ */
+function calculatePagesToFetch(totalPages, maxPages = 30) {
+    if (totalPages <= maxPages) {
+        return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pagesToFetch = [1];
+    const step = (totalPages - 2) / (maxPages - 2);
+    for (let i = 1; i <= maxPages - 2; i++) {
+        pagesToFetch.push(Math.round(1 + i * step));
+    }
+    pagesToFetch.push(totalPages);
+    return Array.from(new Set(pagesToFetch)).sort((a, b) => a - b);
+}
+/**
+ * Deep module fetching sampled stargazers with rate-limit recovery
+ */
+async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
+    const totalPages = Math.ceil(totalStars / 100);
+    const pagesToFetch = calculatePagesToFetch(totalPages, 30);
+    info(`Fetching ${pagesToFetch.length} pages out of ${totalPages} total pages`);
+    const rawData = [];
+    try {
+        for (const page of pagesToFetch) {
+            const { data: stargazers } = await octokit.rest.activity.listStargazersForRepo({
+                owner,
+                repo,
+                per_page: 100,
+                page,
+                headers: {
+                    accept: 'application/vnd.github.star+json'
+                }
+            });
+            const starItems = stargazers;
+            for (let i = 0; i < starItems.length; i++) {
+                const item = starItems[i];
+                if (!item.starred_at)
+                    continue;
+                const globalIndex = (page - 1) * 100 + i + 1;
+                rawData.push({
+                    date: item.starred_at,
+                    count: globalIndex
+                });
+            }
+        }
+    }
+    catch (err) {
+        warning('Encountered an error while fetching stargazers. Will render partial data. Error: ' +
+            (err instanceof Error ? err.message : String(err)));
+    }
+    return rawData;
+}
 
-
-
+;// CONCATENATED MODULE: ./dist-tsc/chart.js
 /**
  * Transforms sparse data points into a daily cumulative series with interpolation
  */
 function processStargazers(stars) {
     if (stars.length === 0)
         return [];
-    // Sort chronologically just to be safe
+    // Sort chronologically
     stars.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const result = [];
     let currentCount = 0;
     const startDate = new Date(stars[0].date);
-    // Reset to start of day
     startDate.setUTCHours(0, 0, 0, 0);
     const endDate = new Date(stars[stars.length - 1].date);
     endDate.setUTCHours(0, 0, 0, 0);
@@ -36952,7 +37003,6 @@ function processStargazers(stars) {
     for (const s of stars) {
         const d = new Date(s.date);
         const dateStr = d.toISOString().split('T')[0];
-        // Keep max count for the day
         starMap.set(dateStr, Math.max(starMap.get(dateStr) ?? 0, s.count));
     }
     // Iterate day by day
@@ -37049,7 +37099,6 @@ function renderSvgChart(data, options) {
     `;
     }
     let xLabels = '';
-    // simple start and end labels
     xLabels += `<text x="${padding.left}" y="${height - 20}" class="text" text-anchor="middle">${data[0].date}</text>`;
     xLabels += `<text x="${width - padding.right}" y="${height - 20}" class="text" text-anchor="middle">${data[data.length - 1].date}</text>`;
     return `<?xml version="1.0" encoding="utf-8"?>
@@ -37062,8 +37111,17 @@ function renderSvgChart(data, options) {
   <path d="${pathD}" class="line" />
 </svg>`;
 }
+
+;// CONCATENATED MODULE: ./dist-tsc/index.js
+
+
+
+
+
+
+
 /**
- * Main execution loop
+ * Main Action Execution Orchestrator
  */
 async function run() {
     try {
@@ -37072,7 +37130,7 @@ async function run() {
         const themeInput = (getInput('theme') || 'auto');
         const octokit = getOctokit(token);
         const context = github_context;
-        // 1. Fetch repo total stars
+        // 1. Fetch total repo star count
         const { data: repo } = await octokit.rest.repos.get({
             owner: context.repo.owner,
             repo: context.repo.repo
@@ -37085,70 +37143,20 @@ async function run() {
             await promises_namespaceObject.writeFile(outputPath, svg, 'utf-8');
             return;
         }
-        // 2. Page sampling
-        const totalPages = Math.ceil(totalStars / 100);
-        const pagesToFetch = [];
-        if (totalPages <= 30) {
-            for (let i = 1; i <= totalPages; i++) {
-                pagesToFetch.push(i);
-            }
-        }
-        else {
-            pagesToFetch.push(1);
-            const step = (totalPages - 2) / 28;
-            for (let i = 1; i <= 28; i++) {
-                pagesToFetch.push(Math.round(1 + i * step));
-            }
-            pagesToFetch.push(totalPages);
-            // Remove duplicates just in case
-            const uniquePages = Array.from(new Set(pagesToFetch)).sort((a, b) => a - b);
-            pagesToFetch.length = 0;
-            pagesToFetch.push(...uniquePages);
-        }
-        info(`Fetching ${pagesToFetch.length} pages out of ${totalPages} total pages`);
-        const rawData = [];
-        // 3. Fetch sampled pages
-        try {
-            for (const page of pagesToFetch) {
-                const { data: stargazers } = await octokit.rest.activity.listStargazersForRepo({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    per_page: 100,
-                    page,
-                    headers: {
-                        accept: 'application/vnd.github.star+json'
-                    }
-                });
-                // The API returns mixed types depending on the header, we must cast it
-                const starItems = stargazers;
-                for (let i = 0; i < starItems.length; i++) {
-                    const item = starItems[i];
-                    if (!item.starred_at)
-                        continue;
-                    const globalIndex = (page - 1) * 100 + i + 1;
-                    rawData.push({
-                        date: item.starred_at,
-                        count: globalIndex
-                    });
-                }
-            }
-        }
-        catch (err) {
-            warning('Encountered an error while fetching stargazers. Will render partial data. Error: ' +
-                (err instanceof Error ? err.message : String(err)));
-        }
+        // 2. Fetch sampled stargazers via deep fetcher module
+        const rawData = await fetchSampledStargazers(context.repo.owner, context.repo.repo, octokit, totalStars);
         if (rawData.length === 0) {
             warning('No stargazers with timestamps could be fetched.');
         }
-        // Add current point
+        // Add current endpoint data point
         rawData.push({
             date: new Date().toISOString(),
             count: totalStars
         });
-        // 4. Process and render
+        // 3. Transform & render chart via deep renderer module
         const timeSeries = processStargazers(rawData);
         const svg = renderSvgChart(timeSeries, { theme: themeInput });
-        // 5. Write to output
+        // 4. Save file & set output
         await promises_namespaceObject.mkdir(external_node_path_namespaceObject.dirname(outputPath), { recursive: true });
         await promises_namespaceObject.writeFile(outputPath, svg, 'utf-8');
         setOutput('svg-path', outputPath);
