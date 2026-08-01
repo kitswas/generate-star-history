@@ -17,3 +17,11 @@ A deep module responsible for interacting with the GitHub REST API, calculating 
 ### ChartRenderer
 
 A deep module responsible for transforming time series data into a responsive, mathematically calculated SVG chart string with dynamic theme support (`dark`, `light`, `auto`).
+
+### MockGitHubApi
+
+A lightweight local mock server built using Node's native `http` server or `msw` that matches GitHub REST API responses for `/repos/{owner}/{repo}` and `/repos/{owner}/{repo}/stargazers`, adhering to schema specifications, custom media types (`application/vnd.github.star+json`), and simulating 403 Forbidden, 422 Unprocessable Entity, and rate limiting.
+
+### FuzzTestSuite
+
+Generative test suite (using `fast-check` property-based testing) that feeds thousands of randomized, malformed, out-of-order, or extreme edge-case payloads to `StargazerFetcher`, `processStargazers`, and `renderSvgChart` to guarantee program termination and crash resilience.

@@ -36984,36 +36984,71 @@ async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
 }
 
 ;// CONCATENATED MODULE: ./dist-tsc/chart.js
+function isValidIsoDate(dateStr) {
+    if (typeof dateStr !== 'string' || dateStr.trim().length === 0)
+        return false;
+    const t = new Date(dateStr).getTime();
+    if (isNaN(t))
+        return false;
+    try {
+        const year = new Date(t).getUTCFullYear();
+        return year >= 2000 && year <= 2100;
+    }
+    catch {
+        return false;
+    }
+}
 /**
  * Transforms sparse data points into a daily cumulative series with interpolation
  */
 function processStargazers(stars) {
-    if (stars.length === 0)
+    if (!Array.isArray(stars) || stars.length === 0)
+        return [];
+    // Filter valid dates and normalize counts
+    const validStars = stars
+        .filter((s) => s && isValidIsoDate(s.date))
+        .map((s) => ({
+        date: s.date,
+        count: Number.isFinite(s.count) ? Math.max(0, Math.floor(s.count)) : 0
+    }));
+    if (validStars.length === 0)
         return [];
     // Sort chronologically
-    stars.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    validStars.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const result = [];
     let currentCount = 0;
-    const startDate = new Date(stars[0].date);
+    const startDate = new Date(validStars[0].date);
     startDate.setUTCHours(0, 0, 0, 0);
-    const endDate = new Date(stars[stars.length - 1].date);
+    const endDate = new Date(validStars[validStars.length - 1].date);
     endDate.setUTCHours(0, 0, 0, 0);
+    // Limit max date range (max 10 years / 3650 days) to avoid long execution loops
+    const diffDays = Math.min(Math.max(0, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))), 3650);
     // Create a map for quick lookups
     const starMap = new Map();
-    for (const s of stars) {
-        const d = new Date(s.date);
-        const dateStr = d.toISOString().split('T')[0];
-        starMap.set(dateStr, Math.max(starMap.get(dateStr) ?? 0, s.count));
+    for (const s of validStars) {
+        try {
+            const d = new Date(s.date);
+            const dateStr = d.toISOString().split('T')[0];
+            starMap.set(dateStr, Math.max(starMap.get(dateStr) ?? 0, s.count));
+        }
+        catch {
+            // Ignore invalid date conversion errors
+        }
     }
     // Iterate day by day
     const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        if (starMap.has(dateStr)) {
-            currentCount = starMap.get(dateStr);
+    for (let day = 0; day <= diffDays; day++) {
+        try {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            if (starMap.has(dateStr)) {
+                currentCount = starMap.get(dateStr);
+            }
+            result.push({ date: dateStr, count: currentCount });
+            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
         }
-        result.push({ date: dateStr, count: currentCount });
-        currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+        catch {
+            break;
+        }
     }
     return result;
 }
@@ -37026,19 +37061,33 @@ function renderSvgChart(dataInput, options) {
     const padding = { top: 40, right: 40, bottom: 60, left: 60 };
     const innerWidth = width - padding.left - padding.right;
     const innerHeight = height - padding.top - padding.bottom;
-    if (dataInput.length === 0) {
+    if (!Array.isArray(dataInput)) {
+        dataInput = [];
+    }
+    // Filter valid points
+    let data = dataInput
+        .filter((d) => d && isValidIsoDate(d.date))
+        .map((d) => ({
+        date: d.date.includes('T') ? d.date.split('T')[0] : d.date,
+        count: Number.isFinite(d.count) ? Math.max(0, Math.floor(d.count)) : 0
+    }));
+    if (data.length === 0) {
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="auto">
-      <text x="${width / 2}" y="${height / 2}" text-anchor="middle" font-family="sans-serif">No data available</text>
+      <rect width="100%" height="100%" fill="#ffffff" />
+      <text x="${width / 2}" y="${height / 2}" text-anchor="middle" font-family="sans-serif" fill="#666666">No data available</text>
     </svg>`;
     }
-    // Clone data array
-    let data = [...dataInput];
     // If only 1 data point exists, prepend a baseline 0 point from 1 day prior
     if (data.length === 1) {
-        const prevDate = new Date(data[0].date);
-        prevDate.setUTCDate(prevDate.getUTCDate() - 1);
-        const prevDateStr = prevDate.toISOString().split('T')[0];
-        data = [{ date: prevDateStr, count: 0 }, ...data];
+        try {
+            const prevDate = new Date(data[0].date);
+            prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+            const prevDateStr = prevDate.toISOString().split('T')[0];
+            data = [{ date: prevDateStr, count: 0 }, ...data];
+        }
+        catch {
+            // Keep single point if ISO conversion fails
+        }
     }
     const maxCount = Math.max(...data.map((d) => d.count), 10);
     const startTime = new Date(data[0].date).getTime();
@@ -37069,14 +37118,15 @@ function renderSvgChart(dataInput, options) {
     let textPrimary = '#333333';
     let gridLine = '#e1e4e8';
     let primary = '#0366d6';
-    if (options.theme === 'dark') {
+    const theme = options?.theme ?? 'auto';
+    if (theme === 'dark') {
         bg = '#0d1117';
         textPrimary = '#c9d1d9';
         gridLine = '#30363d';
         primary = '#58a6ff';
     }
     // Dynamic CSS for auto theme
-    const styleStr = options.theme === 'auto'
+    const styleStr = theme === 'auto'
         ? `
     <style>
       .bg { fill: #ffffff; }
