@@ -8,7 +8,7 @@ A lightweight, standalone TypeScript GitHub Action that generates responsive, ma
 
 - **Multi-Series Comparison Charting**: Pass a comma-separated repository list (`repository: 'owner/repo1, owner/repo2'`) to render multiple star trajectories on a single chart with a color-coded legend key.
 - **Pure CSS Keyframe Animations**: Includes `@keyframes draw` stroke-dasharray animations for smooth line drawing on load, and interactive `:hover` dot scaling.
-- **Rate Limit Resilience**: Built-in page-sampling algorithm that works safely on large repositories without burning your `${{ secrets.GITHUB_TOKEN }}`.
+- **Rate Limit Resilience**: Built-in page-sampling algorithm that works safely on large repositories without burning your token.
 - **Graceful Fallback**: Gracefully renders partial data if GitHub REST API rate limits are hit halfway.
 - **Zero Native Binaries**: Pure mathematical SVG generation (no D3, no Canvas, no C++ compilation).
 - **Themes**: Supports `dark`, `light`, and `auto` (uses system color scheme `@media (prefers-color-scheme)`).
@@ -26,19 +26,66 @@ A lightweight, standalone TypeScript GitHub Action that generates responsive, ma
 | `output-path`  | Output path for the generated `.svg` file                              |    No    | `assets/star-history.svg`  |
 | `theme`        | Chart theme (`auto`, `dark`, `light`)                                  |    No    | `auto`                     |
 
-> [!IMPORTANT]
-> **Fine-Grained Personal Access Token (PAT) Permissions:**  
-> If using a **Fine-grained PAT** for cross-repository star history, set:
->
-> 1. **User permissions** $\rightarrow$ **Starring**: `Access: Read-only`
-> 2. **Repository permissions** $\rightarrow$ **Metadata** or **Contents**: `Access: Read-only`
-> 3. **Repository access**: Ensure the target repository (or _All repositories_) is selected.
-
 ### Outputs
 
 | Output     | Description                                            |
 | :--------- | :----------------------------------------------------- |
 | `svg-path` | Absolute/relative file path to the generated SVG chart |
+
+---
+
+## GitHub REST APIs & Authentication Guide
+
+This action calls the following GitHub REST API endpoints:
+
+### Endpoints Used
+
+1. **`GET /repos/{owner}/{repo}`**
+   - **Purpose:** Fetches repository metadata and total stargazer count (`stargazers_count`).
+   - **Required Permission:** `Metadata` (Read-only).
+
+2. **`GET /repos/{owner}/{repo}/stargazers`**
+   - **Purpose:** Fetches paginated stargazer timestamps (`starred_at`) with the `application/vnd.github.star+json` media header.
+   - **Required Permission:** `Starring` (Read-only), `Metadata` (Read-only), and `Contents` (Read & Write).
+
+---
+
+### Authentication Token Setup
+
+#### 1. Default `${{ secrets.GITHUB_TOKEN }}` (Current Repository)
+
+For generating charts for the repository where the workflow is running, no extra setup is needed. Ensure your workflow has `contents: write` permission to commit the output SVG:
+
+```yaml
+permissions:
+  contents: write
+```
+
+#### 2. Fine-Grained Personal Access Token (PAT) (Cross-Repository)
+
+If targeting **other/external repositories** (e.g. `repository: 'kitswas/VirtualGamePad-PC, kitswas/VirtualGamePad-Mobile'`), create a Fine-grained PAT with:
+
+- **Repository Access**: Select _All repositories_ (or explicitly add target repositories).
+- **User Permissions**:
+  - **Starring**: `Access: Read-only`
+- **Repository Permissions**:
+  - **Contents** (or **Code**): `Access: Read and write`
+  - **Metadata**: `Access: Read-only`
+
+Store this token in your repository secrets as `PAT_TOKEN` and pass it in your workflow:
+
+```yaml
+with:
+  github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+```
+
+#### 3. Personal Access Token (Classic)
+
+If using a Classic PAT:
+
+- **Public Repositories**: Check **`public_repo`** scope.
+- **Private Repositories**: Check **`repo`** scope.
+- **Organization SSO**: If your repository is owned by a SAML SSO-enabled organization, click **Configure SSO** next to the token in Developer Settings.
 
 ---
 
