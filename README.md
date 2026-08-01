@@ -18,12 +18,23 @@ A lightweight, standalone TypeScript GitHub Action that generates responsive, ma
 
 ### Inputs
 
-| Input          | Description                               | Required | Default                    |
-| :------------- | :---------------------------------------- | :------: | :------------------------- |
-| `github-token` | GitHub access token for API requests      | **Yes**  | `${{ github.token }}`      |
-| `repository`   | Target repository in `owner/repo` format  |    No    | `${{ github.repository }}` |
-| `output-path`  | Output path for the generated `.svg` file |    No    | `assets/star-history.svg`  |
-| `theme`        | Chart theme (`auto`, `dark`, `light`)     |    No    | `auto`                     |
+| Input          | Description                                   | Required | Default                    |
+| :------------- | :-------------------------------------------- | :------: | :------------------------- |
+| `github-token` | GitHub access token (`GITHUB_TOKEN` or `PAT`) | **Yes**  | `${{ github.token }}`      |
+| `repository`   | Target repository in `owner/repo` format      |    No    | `${{ github.repository }}` |
+| `output-path`  | Output path for the generated `.svg` file     |    No    | `assets/star-history.svg`  |
+| `theme`        | Chart theme (`auto`, `dark`, `light`)         |    No    | `auto`                     |
+
+> [!IMPORTANT]  
+> **Cross-Repository Token Permissions & PAT:**  
+> When targeting **other/external repositories** (e.g., `repository: 'kitswas/VirtualGamePad-PC'`), the default `${{ secrets.GITHUB_TOKEN }}` generated for the runner may fail with `Resource not accessible by integration`.  
+> To resolve this, pass a Personal Access Token (PAT) with `public_repo` or `repo` scope:
+>
+> ```yaml
+> with:
+>   github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+>   repository: 'kitswas/VirtualGamePad-PC'
+> ```
 
 ### Outputs
 
@@ -100,7 +111,7 @@ jobs:
       - name: Generate Star History (VirtualGamePad-PC)
         uses: kitswas/generate-star-history@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad-PC'
           output-path: 'assets/star-history-virtualgamepad-pc.svg'
           theme: 'auto'
@@ -108,7 +119,7 @@ jobs:
       - name: Generate Star History (VirtualGamePad)
         uses: kitswas/generate-star-history@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad'
           output-path: 'assets/star-history-virtualgamepad.svg'
           theme: 'auto'
@@ -116,7 +127,7 @@ jobs:
       - name: Generate Star History (VirtualGamePad-Mobile)
         uses: kitswas/generate-star-history@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad-Mobile'
           output-path: 'assets/star-history-virtualgamepad-mobile.svg'
           theme: 'auto'
