@@ -25,17 +25,6 @@ A lightweight, standalone TypeScript GitHub Action that generates responsive, ma
 | `output-path`  | Output path for the generated `.svg` file     |    No    | `assets/star-history.svg`  |
 | `theme`        | Chart theme (`auto`, `dark`, `light`)         |    No    | `auto`                     |
 
-> [!IMPORTANT]  
-> **Cross-Repository Token Permissions & PAT:**  
-> When targeting **other/external repositories** (e.g., `repository: 'kitswas/VirtualGamePad-PC'`), the default `${{ secrets.GITHUB_TOKEN }}` generated for the runner may fail with `Resource not accessible by integration`.  
-> To resolve this, pass a Personal Access Token (PAT) with `public_repo` or `repo` scope:
->
-> ```yaml
-> with:
->   github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
->   repository: 'kitswas/VirtualGamePad-PC'
-> ```
-
 ### Outputs
 
 | Output     | Description                                            |
@@ -48,7 +37,7 @@ A lightweight, standalone TypeScript GitHub Action that generates responsive, ma
 
 ### 1. Single Repository Setup (Current Repo)
 
-Place this workflow in `.github/workflows/star-history.yml`:
+Place this workflow in `.github/workflows/generate-star-history.yml`:
 
 ```yaml
 name: Generate Star History
@@ -64,7 +53,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Generate Star History
         uses: kitswas/generate-star-history@v1
@@ -90,10 +79,10 @@ jobs:
 
 ### 2. Multi-Repository Setup (`VirtualGamePad` Suite)
 
-To generate star history charts for multiple repositories within one workflow:
+Place this workflow in `.github/workflows/generate-virtualgamepad-star-history.yml`:
 
 ```yaml
-name: Generate Multi-Repo Star History
+name: Generate VirtualGamePad Star History
 
 on:
   schedule:
@@ -106,12 +95,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Generate Star History (VirtualGamePad-PC)
         uses: kitswas/generate-star-history@v1
         with:
-          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad-PC'
           output-path: 'assets/star-history-virtualgamepad-pc.svg'
           theme: 'auto'
@@ -119,7 +108,7 @@ jobs:
       - name: Generate Star History (VirtualGamePad)
         uses: kitswas/generate-star-history@v1
         with:
-          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad'
           output-path: 'assets/star-history-virtualgamepad.svg'
           theme: 'auto'
@@ -127,7 +116,7 @@ jobs:
       - name: Generate Star History (VirtualGamePad-Mobile)
         uses: kitswas/generate-star-history@v1
         with:
-          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad-Mobile'
           output-path: 'assets/star-history-virtualgamepad-mobile.svg'
           theme: 'auto'

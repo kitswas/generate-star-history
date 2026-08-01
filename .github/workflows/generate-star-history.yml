@@ -1,4 +1,4 @@
-name: Generate Multi-Repo Star History
+name: Generate Star History
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
 jobs:
-  generate-charts:
+  generate-chart:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -14,38 +14,21 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v7
 
-      - name: Generate Star History (VirtualGamePad-PC)
-        uses: ./
-        with:
-          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
-          repository: 'kitswas/VirtualGamePad-PC'
-          output-path: 'assets/star-history-virtualgamepad-pc.svg'
-          theme: 'auto'
-
-      - name: Generate Star History (VirtualGamePad)
+      - name: Generate Star History
         uses: ./
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: 'kitswas/VirtualGamePad'
-          output-path: 'assets/star-history-virtualgamepad.svg'
+          output-path: 'assets/star-history.svg'
           theme: 'auto'
 
-      - name: Generate Star History (VirtualGamePad-Mobile)
-        uses: ./
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: 'kitswas/VirtualGamePad-Mobile'
-          output-path: 'assets/star-history-virtualgamepad-mobile.svg'
-          theme: 'auto'
-
-      - name: Commit and Push Updated SVGs
+      - name: Commit and Push Updated SVG
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/*.svg
+          git add assets/star-history.svg
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update star history charts [skip ci]"
+            git commit -m "chore: update star history chart [skip ci]"
             git push
           fi
