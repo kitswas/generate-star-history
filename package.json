@@ -8,6 +8,7 @@
     "build": "tsc && ncc build dist-tsc/index.js -o dist --source-map --license licenses.txt",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:local": "tsx scripts/test-local.ts",
     "lint": "eslint . --no-error-on-unmatched-pattern",
     "format": "prettier --write \"src/**/*.{ts,json,md}\"",
     "depcruise": "depcruise src --config .dependency-cruiser.js",
