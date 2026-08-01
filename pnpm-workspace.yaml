@@ -3,3 +3,5 @@ allowBuilds:
 peerDependencyRules:
   allowedVersions:
     typescript: 7
+trustPolicy: "no-downgrade"
+minimumReleaseAge: 2880 # 2 days in mins
