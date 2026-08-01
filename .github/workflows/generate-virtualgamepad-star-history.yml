@@ -17,7 +17,7 @@ jobs:
       - name: Generate Star History (VirtualGamePad-PC)
         uses: ./
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad-PC'
           output-path: 'assets/star-history-virtualgamepad-pc.svg'
           theme: 'auto'
@@ -25,7 +25,7 @@ jobs:
       - name: Generate Star History (VirtualGamePad)
         uses: ./
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad'
           output-path: 'assets/star-history-virtualgamepad.svg'
           theme: 'auto'
@@ -33,7 +33,7 @@ jobs:
       - name: Generate Star History (VirtualGamePad-Mobile)
         uses: ./
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad-Mobile'
           output-path: 'assets/star-history-virtualgamepad-mobile.svg'
           theme: 'auto'

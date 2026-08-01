@@ -37275,7 +37275,10 @@ async function run() {
         const context = github_context;
         // Parse repository list (comma-separated or single)
         const rawRepoList = targetRepoInput
-            ? targetRepoInput.split(',').map((r) => r.trim()).filter(Boolean)
+            ? targetRepoInput
+                .split(',')
+                .map((r) => r.trim())
+                .filter(Boolean)
             : [`${context.repo.owner}/${context.repo.repo}`];
         const allSeries = [];
         for (const repoSlug of rawRepoList) {
