@@ -2,10 +2,10 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as github from '@actions/github';
 import { createMockGitHubApiServer } from '../src/mock-api.js';
-import { fetchSampledStargazers } from '../src/fetcher.js';
+import { fetchStarHistory } from '../src/fetcher.js';
 import {
   processStargazers,
-  renderSvgChart,
+  renderChart,
   type ChartOptions,
   type RepositorySeries
 } from '../src/chart.js';
@@ -50,7 +50,7 @@ async function generateLocalChart() {
         }
       ];
 
-      const svg = renderSvgChart(seriesList, { theme });
+      const svg = renderChart(seriesList, { theme });
 
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
       await fs.writeFile(outputPath, svg, 'utf-8');
@@ -58,39 +58,16 @@ async function generateLocalChart() {
       return;
     }
 
-    const repoList = repoSlug
-      .split(',')
-      .map((r) => r.trim())
-      .filter(Boolean);
-    console.log(`🚀 Fetching star history for: ${repoList.join(', ')}...`);
-
     const octokitOptions: Parameters<typeof github.getOctokit>[1] = {};
     if (isMockMode && mockServer) {
       octokitOptions.baseUrl = mockServer.baseUrl;
     }
 
     const octokit = github.getOctokit(token, octokitOptions);
-    const allSeries: RepositorySeries[] = [];
 
-    for (const slug of repoList) {
-      const [owner, repo] = slug.split('/');
-      const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
-      const totalStars = repoData.stargazers_count;
-
-      const rawData = await fetchSampledStargazers(owner, repo, octokit, totalStars);
-      rawData.push({
-        date: new Date().toISOString(),
-        count: totalStars
-      });
-
-      const timeSeries = processStargazers(rawData);
-      allSeries.push({
-        name: slug,
-        data: timeSeries
-      });
-    }
-
-    const svg = renderSvgChart(allSeries, { theme });
+    console.log(`🚀 Fetching star history for: ${repoSlug}...`);
+    const series = await fetchStarHistory(repoSlug, octokit);
+    const svg = renderChart(series, { theme });
 
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, svg, 'utf-8');

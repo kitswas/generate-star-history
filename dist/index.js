@@ -29273,8 +29273,10 @@ var __webpack_exports__ = {};
 
 // EXPORTS
 __nccwpck_require__.d(__webpack_exports__, {
-  _: () => (/* reexport */ processStargazers),
-  Z: () => (/* reexport */ renderSvgChart)
+  Fw: () => (/* reexport */ fetchStarHistory),
+  _q: () => (/* reexport */ processStargazers),
+  xt: () => (/* reexport */ renderChart),
+  ZN: () => (/* reexport */ renderSvgChart)
 });
 
 ;// CONCATENATED MODULE: external "os"
@@ -36927,87 +36929,6 @@ function getOctokit(token, options, ...additionalPlugins) {
 const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs/promises");
 ;// CONCATENATED MODULE: external "node:path"
 const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
-;// CONCATENATED MODULE: ./dist-tsc/fetcher.js
-
-/**
- * Calculates page numbers to sample given total pages
- */
-function calculatePagesToFetch(totalPages, maxPages = 30) {
-    if (totalPages <= maxPages) {
-        return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-    const pagesToFetch = [1];
-    const step = (totalPages - 2) / (maxPages - 2);
-    for (let i = 1; i <= maxPages - 2; i++) {
-        pagesToFetch.push(Math.round(1 + i * step));
-    }
-    pagesToFetch.push(totalPages);
-    return Array.from(new Set(pagesToFetch)).sort((a, b) => a - b);
-}
-/**
- * Deep module fetching sampled stargazers with rate-limit recovery
- */
-async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
-    const totalPages = Math.ceil(totalStars / 100);
-    const pagesToFetch = calculatePagesToFetch(totalPages, 30);
-    info(`Fetching ${pagesToFetch.length} pages out of ${totalPages} total pages for ${owner}/${repo}`);
-    const rawData = [];
-    try {
-        for (const page of pagesToFetch) {
-            let stargazers = [];
-            try {
-                // Tier 1: Try with star+json timestamp header
-                const { data } = await octokit.rest.activity.listStargazersForRepo({
-                    owner,
-                    repo,
-                    per_page: 100,
-                    page,
-                    headers: {
-                        accept: 'application/vnd.github.star+json'
-                    }
-                });
-                stargazers = data;
-            }
-            catch (tier1Err) {
-                const errMsg = tier1Err instanceof Error ? tier1Err.message : String(tier1Err);
-                warning(`Tier 1 (Auth + star+json) failed for ${owner}/${repo}: ${errMsg}`);
-                // Tier 2 Fallback: Try with standard JSON header
-                const { data } = await octokit.rest.activity.listStargazersForRepo({
-                    owner,
-                    repo,
-                    per_page: 100,
-                    page,
-                    headers: {
-                        accept: 'application/vnd.github+json'
-                    }
-                });
-                stargazers = data;
-            }
-            for (let i = 0; i < stargazers.length; i++) {
-                const item = stargazers[i];
-                const dateStr = item.starred_at || item.created_at || new Date().toISOString();
-                const globalIndex = (page - 1) * 100 + i + 1;
-                rawData.push({
-                    date: dateStr,
-                    count: globalIndex
-                });
-            }
-        }
-    }
-    catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        warning(`Encountered an error while fetching stargazers for ${owner}/${repo}. Will render partial data. Error: ${errMsg}`);
-        if (errMsg.includes('Resource not accessible')) {
-            error(`🔑 PERMISSION TROUBLESHOOTING FOR ${owner}/${repo}:\n` +
-                `1. Fine-grained PAT: Go to 'User permissions' -> Set 'Starring' to 'Read-only'.\n` +
-                `2. Repository access: Ensure 'Repository access' includes '${owner}/${repo}' with 'Metadata: Read-only' or 'Contents: Read-only'.\n` +
-                `3. Classic PAT: Ensure 'public_repo' scope is checked (or 'repo' for private repositories).\n` +
-                `4. Organization SSO: If '${owner}' is an organization with SAML SSO, click 'Configure SSO' next to your token.`);
-        }
-    }
-    return rawData;
-}
-
 ;// CONCATENATED MODULE: ./dist-tsc/chart.js
 const DEFAULT_PALETTE = [
     '#0366d6', // Blue
@@ -37087,9 +37008,9 @@ function processStargazers(stars) {
     return result;
 }
 /**
- * Renders the SVG chart mathematically with animation and multi-series support
+ * Deep ChartEngine entry point: Renders SVG chart mathematically with animation and multi-series support
  */
-function renderSvgChart(inputData, options) {
+function renderChart(inputData, options) {
     const width = 800;
     const height = 400;
     // Convert legacy single-series input to RepositorySeries[]
@@ -37278,6 +37199,140 @@ function renderSvgChart(inputData, options) {
   ${seriesMarkup}
 </svg>`;
 }
+// Backwards compatibility alias
+const renderSvgChart = renderChart;
+
+;// CONCATENATED MODULE: ./dist-tsc/fetcher.js
+
+
+/**
+ * Calculates page numbers to sample given total pages
+ */
+function calculatePagesToFetch(totalPages, maxPages = 30) {
+    if (totalPages <= maxPages) {
+        return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pagesToFetch = [1];
+    const step = (totalPages - 2) / (maxPages - 2);
+    for (let i = 1; i <= maxPages - 2; i++) {
+        pagesToFetch.push(Math.round(1 + i * step));
+    }
+    pagesToFetch.push(totalPages);
+    return Array.from(new Set(pagesToFetch)).sort((a, b) => a - b);
+}
+/**
+ * Deep module fetching sampled stargazers with rate-limit recovery
+ */
+async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
+    const totalPages = Math.ceil(totalStars / 100);
+    const pagesToFetch = calculatePagesToFetch(totalPages, 30);
+    info(`Fetching ${pagesToFetch.length} pages out of ${totalPages} total pages for ${owner}/${repo}`);
+    const rawData = [];
+    try {
+        for (const page of pagesToFetch) {
+            let stargazers = [];
+            try {
+                // Tier 1: Try with star+json timestamp header
+                const { data } = await octokit.rest.activity.listStargazersForRepo({
+                    owner,
+                    repo,
+                    per_page: 100,
+                    page,
+                    headers: {
+                        accept: 'application/vnd.github.star+json'
+                    }
+                });
+                stargazers = data;
+            }
+            catch (tier1Err) {
+                const errMsg = tier1Err instanceof Error ? tier1Err.message : String(tier1Err);
+                warning(`Tier 1 (Auth + star+json) failed for ${owner}/${repo}: ${errMsg}`);
+                // Tier 2 Fallback: Try with standard JSON header
+                const { data } = await octokit.rest.activity.listStargazersForRepo({
+                    owner,
+                    repo,
+                    per_page: 100,
+                    page,
+                    headers: {
+                        accept: 'application/vnd.github+json'
+                    }
+                });
+                stargazers = data;
+            }
+            for (let i = 0; i < stargazers.length; i++) {
+                const item = stargazers[i];
+                const dateStr = item.starred_at || item.created_at || new Date().toISOString();
+                const globalIndex = (page - 1) * 100 + i + 1;
+                rawData.push({
+                    date: dateStr,
+                    count: globalIndex
+                });
+            }
+        }
+    }
+    catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        warning(`Encountered an error while fetching stargazers for ${owner}/${repo}. Will render partial data. Error: ${errMsg}`);
+        if (errMsg.includes('Resource not accessible')) {
+            error(`🔑 PERMISSION TROUBLESHOOTING FOR ${owner}/${repo}:\n` +
+                `1. Fine-grained PAT: Go to 'User permissions' -> Set 'Starring' to 'Read-only'.\n` +
+                `2. Repository access: Ensure 'Repository access' includes '${owner}/${repo}' with 'Metadata: Read-only' or 'Contents: Read and write'.\n` +
+                `3. Classic PAT: Ensure 'public_repo' scope is checked (or 'repo' for private repositories).\n` +
+                `4. Organization SSO: If '${owner}' is an organization with SAML SSO, click 'Configure SSO' next to your token.`);
+        }
+    }
+    return rawData;
+}
+/**
+ * Deep unified entry point: Fetches, samples, and transforms stargazers for target repositories
+ */
+async function fetchStarHistory(targetRepoInput, octokit, defaultOwner = '', defaultRepo = '') {
+    const rawRepoList = targetRepoInput
+        ? targetRepoInput
+            .split(',')
+            .map((r) => r.trim())
+            .filter(Boolean)
+        : [defaultOwner && defaultRepo ? `${defaultOwner}/${defaultRepo}` : ''];
+    const allSeries = [];
+    for (const repoSlug of rawRepoList) {
+        if (!repoSlug)
+            continue;
+        let owner = defaultOwner;
+        let repo = defaultRepo;
+        if (repoSlug.includes('/')) {
+            const parts = repoSlug.split('/');
+            owner = parts[0].trim();
+            repo = parts[1].trim();
+        }
+        info(`Fetching stargazers for target repository: ${owner}/${repo}`);
+        try {
+            const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
+            const totalStars = repoData.stargazers_count;
+            if (totalStars === 0) {
+                info(`Repository ${owner}/${repo} has 0 stars.`);
+                allSeries.push({
+                    name: `${owner}/${repo}`,
+                    data: []
+                });
+                continue;
+            }
+            const rawData = await fetchSampledStargazers(owner, repo, octokit, totalStars);
+            rawData.push({
+                date: new Date().toISOString(),
+                count: totalStars
+            });
+            const timeSeries = processStargazers(rawData);
+            allSeries.push({
+                name: `${owner}/${repo}`,
+                data: timeSeries
+            });
+        }
+        catch (err) {
+            warning(`Failed to fetch data for ${owner}/${repo}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    }
+    return allSeries;
+}
 
 ;// CONCATENATED MODULE: ./dist-tsc/index.js
 
@@ -37288,7 +37343,7 @@ function renderSvgChart(inputData, options) {
 
 
 /**
- * Main Action Execution Orchestrator
+ * Main Action Execution Orchestrator - Non-leaky 10-line runner
  */
 async function run() {
     try {
@@ -37298,59 +37353,9 @@ async function run() {
         const themeInput = (getInput('theme') || 'auto');
         const octokit = getOctokit(token);
         const context = github_context;
-        // Parse repository list (comma-separated or single)
-        const rawRepoList = targetRepoInput
-            ? targetRepoInput
-                .split(',')
-                .map((r) => r.trim())
-                .filter(Boolean)
-            : [`${context.repo.owner}/${context.repo.repo}`];
-        const allSeries = [];
-        for (const repoSlug of rawRepoList) {
-            let owner = context.repo.owner;
-            let repo = context.repo.repo;
-            if (repoSlug.includes('/')) {
-                const parts = repoSlug.split('/');
-                owner = parts[0].trim();
-                repo = parts[1].trim();
-            }
-            info(`Fetching stargazers for target repository: ${owner}/${repo}`);
-            try {
-                const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
-                const totalStars = repoData.stargazers_count;
-                if (totalStars === 0) {
-                    info(`Repository ${owner}/${repo} has 0 stars.`);
-                    allSeries.push({
-                        name: `${owner}/${repo}`,
-                        data: []
-                    });
-                    continue;
-                }
-                const rawData = await fetchSampledStargazers(owner, repo, octokit, totalStars);
-                rawData.push({
-                    date: new Date().toISOString(),
-                    count: totalStars
-                });
-                const timeSeries = processStargazers(rawData);
-                allSeries.push({
-                    name: `${owner}/${repo}`,
-                    data: timeSeries
-                });
-            }
-            catch (err) {
-                warning(`Failed to fetch data for ${owner}/${repo}: ${err instanceof Error ? err.message : String(err)}`);
-            }
-        }
-        if (allSeries.length === 0 || allSeries.every((s) => s.data.length === 0)) {
-            info('No stargazer data retrieved for any repository. Generating empty chart.');
-            const svg = renderSvgChart([], { theme: themeInput });
-            await promises_namespaceObject.mkdir(external_node_path_namespaceObject.dirname(outputPath), { recursive: true });
-            await promises_namespaceObject.writeFile(outputPath, svg, 'utf-8');
-            return;
-        }
-        // Transform & render multi-series SVG chart
-        const svg = renderSvgChart(allSeries, { theme: themeInput });
-        // Save file & set output
+        // Deep modules: fetchStarHistory hides multi-repo orchestration & data aggregation; renderChart hides SVG generation
+        const series = await fetchStarHistory(targetRepoInput, octokit, context.repo.owner, context.repo.repo);
+        const svg = renderChart(series, { theme: themeInput });
         await promises_namespaceObject.mkdir(external_node_path_namespaceObject.dirname(outputPath), { recursive: true });
         await promises_namespaceObject.writeFile(outputPath, svg, 'utf-8');
         setOutput('svg-path', outputPath);
@@ -37370,8 +37375,10 @@ if (process.env.NODE_ENV !== 'test' && import.meta.url.endsWith(process.argv[1] 
     run();
 }
 
-var __webpack_exports__processStargazers = __webpack_exports__._;
-var __webpack_exports__renderSvgChart = __webpack_exports__.Z;
-export { __webpack_exports__processStargazers as processStargazers, __webpack_exports__renderSvgChart as renderSvgChart };
+var __webpack_exports__fetchStarHistory = __webpack_exports__.Fw;
+var __webpack_exports__processStargazers = __webpack_exports__._q;
+var __webpack_exports__renderChart = __webpack_exports__.xt;
+var __webpack_exports__renderSvgChart = __webpack_exports__.ZN;
+export { __webpack_exports__fetchStarHistory as fetchStarHistory, __webpack_exports__processStargazers as processStargazers, __webpack_exports__renderChart as renderChart, __webpack_exports__renderSvgChart as renderSvgChart };
 
 //# sourceMappingURL=index.js.map

@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import type * as github from '@actions/github';
+import { processStargazers, type RepositorySeries, type TimeSeriesPoint } from './chart.js';
 
 export interface RawStarPoint {
   date: string;
@@ -99,7 +100,7 @@ export async function fetchSampledStargazers(
       core.error(
         `🔑 PERMISSION TROUBLESHOOTING FOR ${owner}/${repo}:\n` +
           `1. Fine-grained PAT: Go to 'User permissions' -> Set 'Starring' to 'Read-only'.\n` +
-          `2. Repository access: Ensure 'Repository access' includes '${owner}/${repo}' with 'Metadata: Read-only' or 'Contents: Read-only'.\n` +
+          `2. Repository access: Ensure 'Repository access' includes '${owner}/${repo}' with 'Metadata: Read-only' or 'Contents: Read and write'.\n` +
           `3. Classic PAT: Ensure 'public_repo' scope is checked (or 'repo' for private repositories).\n` +
           `4. Organization SSO: If '${owner}' is an organization with SAML SSO, click 'Configure SSO' next to your token.`
       );
@@ -107,4 +108,70 @@ export async function fetchSampledStargazers(
   }
 
   return rawData;
+}
+
+/**
+ * Deep unified entry point: Fetches, samples, and transforms stargazers for target repositories
+ */
+export async function fetchStarHistory(
+  targetRepoInput: string | undefined,
+  octokit: OctokitInstance,
+  defaultOwner = '',
+  defaultRepo = ''
+): Promise<RepositorySeries[]> {
+  const rawRepoList = targetRepoInput
+    ? targetRepoInput
+        .split(',')
+        .map((r) => r.trim())
+        .filter(Boolean)
+    : [defaultOwner && defaultRepo ? `${defaultOwner}/${defaultRepo}` : ''];
+
+  const allSeries: RepositorySeries[] = [];
+
+  for (const repoSlug of rawRepoList) {
+    if (!repoSlug) continue;
+
+    let owner = defaultOwner;
+    let repo = defaultRepo;
+
+    if (repoSlug.includes('/')) {
+      const parts = repoSlug.split('/');
+      owner = parts[0].trim();
+      repo = parts[1].trim();
+    }
+
+    core.info(`Fetching stargazers for target repository: ${owner}/${repo}`);
+
+    try {
+      const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
+      const totalStars = repoData.stargazers_count;
+
+      if (totalStars === 0) {
+        core.info(`Repository ${owner}/${repo} has 0 stars.`);
+        allSeries.push({
+          name: `${owner}/${repo}`,
+          data: []
+        });
+        continue;
+      }
+
+      const rawData = await fetchSampledStargazers(owner, repo, octokit, totalStars);
+      rawData.push({
+        date: new Date().toISOString(),
+        count: totalStars
+      });
+
+      const timeSeries: TimeSeriesPoint[] = processStargazers(rawData);
+      allSeries.push({
+        name: `${owner}/${repo}`,
+        data: timeSeries
+      });
+    } catch (err) {
+      core.warning(
+        `Failed to fetch data for ${owner}/${repo}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  return allSeries;
 }

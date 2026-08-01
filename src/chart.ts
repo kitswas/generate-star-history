@@ -100,11 +100,11 @@ export function processStargazers(stars: { date: string; count: number }[]): Tim
 }
 
 /**
- * Renders the SVG chart mathematically with animation and multi-series support
+ * Deep ChartEngine entry point: Renders SVG chart mathematically with animation and multi-series support
  */
-export function renderSvgChart(
+export function renderChart(
   inputData: TimeSeriesPoint[] | RepositorySeries[],
-  options: ChartOptions
+  options?: ChartOptions
 ): string {
   const width = 800;
   const height = 400;
@@ -320,3 +320,6 @@ export function renderSvgChart(
   ${seriesMarkup}
 </svg>`;
 }
+
+// Backwards compatibility alias
+export const renderSvgChart = renderChart;
