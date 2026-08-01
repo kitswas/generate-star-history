@@ -3,6 +3,10 @@ name: Generate Star History
 on:
   schedule:
     - cron: '0 0 * * 0' # Weekly on Sunday at midnight UTC
+  push:
+    # Sequence of patterns matched against refs/heads
+    branches:
+      - main
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
 jobs:
