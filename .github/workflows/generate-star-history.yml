@@ -12,12 +12,12 @@ jobs:
       contents: write
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Generate Star History (VirtualGamePad-PC)
         uses: ./
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad-PC'
           output-path: 'assets/star-history-virtualgamepad-pc.svg'
           theme: 'auto'

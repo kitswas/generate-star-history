@@ -21,5 +21,5 @@ outputs:
   svg-path:
     description: 'The path where the SVG was written'
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
