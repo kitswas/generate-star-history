@@ -5,6 +5,10 @@ inputs:
     description: 'GitHub token for fetching star history'
     required: true
     default: ${{ github.token }}
+  repository:
+    description: 'Target repository in owner/repo format'
+    required: false
+    default: ${{ github.repository }}
   output-path:
     description: 'Output path for the generated SVG chart'
     required: false

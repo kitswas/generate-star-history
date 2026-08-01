@@ -1,0 +1,51 @@
+name: Generate Multi-Repo Star History
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Weekly on Sunday at midnight UTC
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  generate-charts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Generate Star History (VirtualGamePad-PC)
+        uses: kitswas/generate-star-history@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: 'kitswas/VirtualGamePad-PC'
+          output-path: 'assets/star-history-virtualgamepad-pc.svg'
+          theme: 'auto'
+
+      - name: Generate Star History (VirtualGamePad)
+        uses: kitswas/generate-star-history@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: 'kitswas/VirtualGamePad'
+          output-path: 'assets/star-history-virtualgamepad.svg'
+          theme: 'auto'
+
+      - name: Generate Star History (VirtualGamePad-Mobile)
+        uses: kitswas/generate-star-history@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: 'kitswas/VirtualGamePad-Mobile'
+          output-path: 'assets/star-history-virtualgamepad-mobile.svg'
+          theme: 'auto'
+
+      - name: Commit and Push Updated SVGs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/*.svg
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update star history charts [skip ci]"
+            git push
+          fi

@@ -14,21 +14,34 @@ export type { ChartOptions };
 async function run() {
   try {
     const token = core.getInput('github-token', { required: true });
+    const targetRepoInput = core.getInput('repository');
     const outputPath = core.getInput('output-path') || 'assets/star-history.svg';
     const themeInput = (core.getInput('theme') || 'auto') as ChartOptions['theme'];
 
     const octokit = github.getOctokit(token);
     const context = github.context;
 
+    // Parse repository owner & name
+    let owner = context.repo.owner;
+    let repo = context.repo.repo;
+
+    if (targetRepoInput && targetRepoInput.includes('/')) {
+      const parts = targetRepoInput.split('/');
+      owner = parts[0].trim();
+      repo = parts[1].trim();
+    }
+
+    core.info(`Target repository: ${owner}/${repo}`);
+
     // 1. Fetch total repo star count
-    const { data: repo } = await octokit.rest.repos.get({
-      owner: context.repo.owner,
-      repo: context.repo.repo
+    const { data: repoData } = await octokit.rest.repos.get({
+      owner,
+      repo
     });
 
-    const totalStars = repo.stargazers_count;
+    const totalStars = repoData.stargazers_count;
     if (totalStars === 0) {
-      core.info('Repository has 0 stars. Generating empty chart.');
+      core.info(`Repository ${owner}/${repo} has 0 stars. Generating empty chart.`);
       const svg = renderSvgChart([], { theme: themeInput });
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
       await fs.writeFile(outputPath, svg, 'utf-8');
@@ -36,12 +49,7 @@ async function run() {
     }
 
     // 2. Fetch sampled stargazers via deep fetcher module
-    const rawData = await fetchSampledStargazers(
-      context.repo.owner,
-      context.repo.repo,
-      octokit,
-      totalStars
-    );
+    const rawData = await fetchSampledStargazers(owner, repo, octokit, totalStars);
 
     if (rawData.length === 0) {
       core.warning('No stargazers with timestamps could be fetched.');
