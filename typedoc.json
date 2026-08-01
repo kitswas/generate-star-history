@@ -1,0 +1,6 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "out": "dist-docs",
+  "name": "generate-star-history",
+  "readme": "README.md"
+}

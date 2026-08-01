@@ -1,20 +1,50 @@
 {
   "name": "generate-star-history",
   "version": "1.0.0",
-  "description": "Generates a star history chart for a GitHub repository",
-  "main": "index.js",
+  "description": "GitHub Action to generate an SVG star history chart",
+  "main": "dist/index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc && ncc build dist-tsc/index.js -o dist --source-map --license licenses.txt",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint . --no-error-on-unmatched-pattern",
+    "format": "prettier --write \"src/**/*.{ts,json,md}\"",
+    "depcruise": "depcruise src --config .dependency-cruiser.js",
+    "prepare": "husky"
   },
-  "keywords": [],
-  "author": "Swastik Pal",
-  "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.17.0",
-      "onFail": "download"
+  "dependencies": {
+    "@actions/core": "^3.0.1",
+    "@actions/github": "^9.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.1.2",
+    "@vercel/ncc": "^0.44.1",
+    "dependency-cruiser": "^18.1.0",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.2.0",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.1",
+    "typedoc": "^0.28.20",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "typescript": "7"
+      }
     }
   },
-  "type": "module"
+  "lint-staged": {
+    "*.ts": [
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
 }

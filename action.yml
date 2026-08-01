@@ -1,0 +1,21 @@
+name: 'Generate Star History'
+description: 'Generates a responsive SVG star history chart for your repository'
+inputs:
+  github-token:
+    description: 'GitHub token for fetching star history'
+    required: true
+    default: ${{ github.token }}
+  output-path:
+    description: 'Output path for the generated SVG chart'
+    required: false
+    default: 'assets/star-history.svg'
+  theme:
+    description: 'Chart theme (dark, light, auto)'
+    required: false
+    default: 'auto'
+outputs:
+  svg-path:
+    description: 'The path where the SVG was written'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
