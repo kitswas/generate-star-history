@@ -39,39 +39,71 @@ export async function fetchSampledStargazers(
   const totalPages = Math.ceil(totalStars / 100);
   const pagesToFetch = calculatePagesToFetch(totalPages, 30);
 
-  core.info(`Fetching ${pagesToFetch.length} pages out of ${totalPages} total pages`);
+  core.info(
+    `Fetching ${pagesToFetch.length} pages out of ${totalPages} total pages for ${owner}/${repo}`
+  );
 
   const rawData: RawStarPoint[] = [];
 
   try {
     for (const page of pagesToFetch) {
-      const { data: stargazers } = await octokit.rest.activity.listStargazersForRepo({
-        owner,
-        repo,
-        per_page: 100,
-        page,
-        headers: {
-          accept: 'application/vnd.github.star+json'
-        }
-      });
+      let stargazers: unknown[] = [];
 
-      const starItems = stargazers as unknown as { starred_at: string }[];
+      try {
+        // Tier 1: Try with star+json timestamp header
+        const { data } = await octokit.rest.activity.listStargazersForRepo({
+          owner,
+          repo,
+          per_page: 100,
+          page,
+          headers: {
+            accept: 'application/vnd.github.star+json'
+          }
+        });
+        stargazers = data as unknown[];
+      } catch (tier1Err) {
+        const errMsg = tier1Err instanceof Error ? tier1Err.message : String(tier1Err);
+        core.warning(`Tier 1 (Auth + star+json) failed for ${owner}/${repo}: ${errMsg}`);
 
-      for (let i = 0; i < starItems.length; i++) {
-        const item = starItems[i];
-        if (!item.starred_at) continue;
+        // Tier 2 Fallback: Try with standard JSON header
+        const { data } = await octokit.rest.activity.listStargazersForRepo({
+          owner,
+          repo,
+          per_page: 100,
+          page,
+          headers: {
+            accept: 'application/vnd.github+json'
+          }
+        });
+        stargazers = data as unknown[];
+      }
+
+      for (let i = 0; i < stargazers.length; i++) {
+        const item = stargazers[i] as { starred_at?: string; created_at?: string };
+        const dateStr = item.starred_at || item.created_at || new Date().toISOString();
         const globalIndex = (page - 1) * 100 + i + 1;
+
         rawData.push({
-          date: item.starred_at,
+          date: dateStr,
           count: globalIndex
         });
       }
     }
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     core.warning(
-      'Encountered an error while fetching stargazers. Will render partial data. Error: ' +
-        (err instanceof Error ? err.message : String(err))
+      `Encountered an error while fetching stargazers for ${owner}/${repo}. Will render partial data. Error: ${errMsg}`
     );
+
+    if (errMsg.includes('Resource not accessible')) {
+      core.error(
+        `🔑 PERMISSION TROUBLESHOOTING FOR ${owner}/${repo}:\n` +
+          `1. Fine-grained PAT: Go to 'User permissions' -> Set 'Starring' to 'Read-only'.\n` +
+          `2. Repository access: Ensure 'Repository access' includes '${owner}/${repo}' with 'Metadata: Read-only' or 'Contents: Read-only'.\n` +
+          `3. Classic PAT: Ensure 'public_repo' scope is checked (or 'repo' for private repositories).\n` +
+          `4. Organization SSO: If '${owner}' is an organization with SAML SSO, click 'Configure SSO' next to your token.`
+      );
+    }
   }
 
   return rawData;

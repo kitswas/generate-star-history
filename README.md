@@ -26,6 +26,14 @@ A lightweight, standalone TypeScript GitHub Action that generates responsive, ma
 | `output-path`  | Output path for the generated `.svg` file                              |    No    | `assets/star-history.svg`  |
 | `theme`        | Chart theme (`auto`, `dark`, `light`)                                  |    No    | `auto`                     |
 
+> [!IMPORTANT]
+> **Fine-Grained Personal Access Token (PAT) Permissions:**  
+> If using a **Fine-grained PAT** for cross-repository star history, set:
+>
+> 1. **User permissions** $\rightarrow$ **Starring**: `Access: Read-only`
+> 2. **Repository permissions** $\rightarrow$ **Metadata** or **Contents**: `Access: Read-only`
+> 3. **Repository access**: Ensure the target repository (or _All repositories_) is selected.
+
 ### Outputs
 
 | Output     | Description                                            |
@@ -101,7 +109,7 @@ jobs:
       - name: Generate Comparison Chart
         uses: kitswas/generate-star-history@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           repository: 'kitswas/VirtualGamePad-PC, kitswas/VirtualGamePad-Mobile'
           output-path: 'assets/star-history-comparison.svg'
           theme: 'auto'
