@@ -3,10 +3,15 @@ import * as github from '@actions/github';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { fetchSampledStargazers } from './fetcher.js';
-import { processStargazers, renderSvgChart, type ChartOptions } from './chart.js';
+import {
+  processStargazers,
+  renderSvgChart,
+  type ChartOptions,
+  type RepositorySeries
+} from './chart.js';
 
 export { processStargazers, renderSvgChart };
-export type { ChartOptions };
+export type { ChartOptions, RepositorySeries };
 
 /**
  * Main Action Execution Orchestrator
@@ -21,51 +26,71 @@ async function run() {
     const octokit = github.getOctokit(token);
     const context = github.context;
 
-    // Parse repository owner & name
-    let owner = context.repo.owner;
-    let repo = context.repo.repo;
+    // Parse repository list (comma-separated or single)
+    const rawRepoList = targetRepoInput
+      ? targetRepoInput
+          .split(',')
+          .map((r) => r.trim())
+          .filter(Boolean)
+      : [`${context.repo.owner}/${context.repo.repo}`];
 
-    if (targetRepoInput && targetRepoInput.includes('/')) {
-      const parts = targetRepoInput.split('/');
-      owner = parts[0].trim();
-      repo = parts[1].trim();
+    const allSeries: RepositorySeries[] = [];
+
+    for (const repoSlug of rawRepoList) {
+      let owner = context.repo.owner;
+      let repo = context.repo.repo;
+
+      if (repoSlug.includes('/')) {
+        const parts = repoSlug.split('/');
+        owner = parts[0].trim();
+        repo = parts[1].trim();
+      }
+
+      core.info(`Fetching stargazers for target repository: ${owner}/${repo}`);
+
+      try {
+        const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
+        const totalStars = repoData.stargazers_count;
+
+        if (totalStars === 0) {
+          core.info(`Repository ${owner}/${repo} has 0 stars.`);
+          allSeries.push({
+            name: `${owner}/${repo}`,
+            data: []
+          });
+          continue;
+        }
+
+        const rawData = await fetchSampledStargazers(owner, repo, octokit, totalStars);
+        rawData.push({
+          date: new Date().toISOString(),
+          count: totalStars
+        });
+
+        const timeSeries = processStargazers(rawData);
+        allSeries.push({
+          name: `${owner}/${repo}`,
+          data: timeSeries
+        });
+      } catch (err) {
+        core.warning(
+          `Failed to fetch data for ${owner}/${repo}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
     }
 
-    core.info(`Target repository: ${owner}/${repo}`);
-
-    // 1. Fetch total repo star count
-    const { data: repoData } = await octokit.rest.repos.get({
-      owner,
-      repo
-    });
-
-    const totalStars = repoData.stargazers_count;
-    if (totalStars === 0) {
-      core.info(`Repository ${owner}/${repo} has 0 stars. Generating empty chart.`);
+    if (allSeries.length === 0 || allSeries.every((s) => s.data.length === 0)) {
+      core.info('No stargazer data retrieved for any repository. Generating empty chart.');
       const svg = renderSvgChart([], { theme: themeInput });
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
       await fs.writeFile(outputPath, svg, 'utf-8');
       return;
     }
 
-    // 2. Fetch sampled stargazers via deep fetcher module
-    const rawData = await fetchSampledStargazers(owner, repo, octokit, totalStars);
+    // Transform & render multi-series SVG chart
+    const svg = renderSvgChart(allSeries, { theme: themeInput });
 
-    if (rawData.length === 0) {
-      core.warning('No stargazers with timestamps could be fetched.');
-    }
-
-    // Add current endpoint data point
-    rawData.push({
-      date: new Date().toISOString(),
-      count: totalStars
-    });
-
-    // 3. Transform & render chart via deep renderer module
-    const timeSeries = processStargazers(rawData);
-    const svg = renderSvgChart(timeSeries, { theme: themeInput });
-
-    // 4. Save file & set output
+    // Save file & set output
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, svg, 'utf-8');
 

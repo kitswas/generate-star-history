@@ -9,7 +9,13 @@ describe('Large-Scale Fuzz Testing (fast-check)', () => {
         fc.array(
           fc.record({
             date: fc.oneof(
-              fc.date().map((d) => d.toISOString()),
+              fc.date().map((d) => {
+                try {
+                  return d.toISOString();
+                } catch {
+                  return '2024-01-01T00:00:00Z';
+                }
+              }),
               fc.string(),
               fc.constant('invalid-date-string'),
               fc.constant('-271821-04-20'),
@@ -41,7 +47,13 @@ describe('Large-Scale Fuzz Testing (fast-check)', () => {
         fc.array(
           fc.record({
             date: fc.oneof(
-              fc.date().map((d) => d.toISOString().split('T')[0]),
+              fc.date().map((d) => {
+                try {
+                  return d.toISOString().split('T')[0];
+                } catch {
+                  return '2024-01-01';
+                }
+              }),
               fc.string(),
               fc.constant('-271821-04-20')
             ),

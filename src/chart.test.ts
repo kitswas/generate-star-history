@@ -1,49 +1,60 @@
 import { describe, it, expect } from 'vitest';
 import { processStargazers, renderSvgChart } from './chart.js';
 
-describe('processStargazers', () => {
-  it('handles empty arrays', () => {
-    expect(processStargazers([])).toEqual([]);
-  });
-
-  it('generates cumulative counts and backfills missing days', () => {
-    const input = [
-      { date: '2024-01-01T12:00:00Z', count: 10 },
-      { date: '2024-01-03T12:00:00Z', count: 20 }
+describe('ChartRenderer', () => {
+  it('correctly sorts and backfills stargazer time series', () => {
+    const raw = [
+      { date: '2023-01-03T10:00:00Z', count: 5 },
+      { date: '2023-01-01T10:00:00Z', count: 2 }
     ];
 
-    const result = processStargazers(input);
+    const result = processStargazers(raw);
     expect(result).toHaveLength(3);
-
-    expect(result[0].date).toBe('2024-01-01');
-    expect(result[0].count).toBe(10);
-
-    expect(result[1].date).toBe('2024-01-02');
-    expect(result[1].count).toBe(10); // Backfilled from Jan 1
-
-    expect(result[2].date).toBe('2024-01-03');
-    expect(result[2].count).toBe(20);
-  });
-});
-
-describe('renderSvgChart', () => {
-  it('renders an empty state for no data', () => {
-    const svg = renderSvgChart([], { theme: 'auto' });
-    expect(svg).toContain('No data available');
+    expect(result[0]).toEqual({ date: '2023-01-01', count: 2 });
+    expect(result[1]).toEqual({ date: '2023-01-02', count: 2 });
+    expect(result[2]).toEqual({ date: '2023-01-03', count: 5 });
   });
 
-  it('renders SVG for valid data', () => {
+  it('renders a valid single-series SVG string with theme classes and animation CSS', () => {
     const data = [
-      { date: '2024-01-01', count: 10 },
-      { date: '2024-01-02', count: 20 }
+      { date: '2023-01-01', count: 10 },
+      { date: '2023-01-02', count: 20 }
     ];
 
-    const svg = renderSvgChart(data, { theme: 'dark' });
+    const svg = renderSvgChart(data, { theme: 'auto' });
     expect(svg).toContain('<svg');
-    expect(svg).toContain('class="line"');
-    expect(svg).toContain('class="area"');
-    expect(svg).toContain('fill: #0d1117');
-    expect(svg).toContain('2024-01-01');
-    expect(svg).toContain('2024-01-02');
+    expect(svg).toContain('.line-anim');
+    expect(svg).toContain('@keyframes draw');
+    expect(svg).toContain('</svg>');
+  });
+
+  it('renders a valid multi-series SVG chart with a legend', () => {
+    const multiSeries = [
+      {
+        name: 'Repo A',
+        data: [
+          { date: '2023-01-01', count: 10 },
+          { date: '2023-01-02', count: 20 }
+        ]
+      },
+      {
+        name: 'Repo B',
+        data: [
+          { date: '2023-01-01', count: 5 },
+          { date: '2023-01-02', count: 15 }
+        ]
+      }
+    ];
+
+    const svg = renderSvgChart(multiSeries, { theme: 'dark' });
+    expect(svg).toContain('<g class="legend">');
+    expect(svg).toContain('Repo A');
+    expect(svg).toContain('Repo B');
+    expect(svg).toContain('.bg { fill: #0d1117; }');
+  });
+
+  it('handles empty input gracefully', () => {
+    const svg = renderSvgChart([], { theme: 'light' });
+    expect(svg).toContain('No data available');
   });
 });

@@ -9,15 +9,16 @@ export interface MockApiServerOptions {
  * Zero-dependency Mock GitHub REST API HTTP server
  */
 export function createMockGitHubApiServer(options: MockApiServerOptions = {}) {
-  const port = options.port ?? 9876;
+  const requestedPort = options.port ?? 0; // Default 0 for dynamic OS port assignment
 
   const server = http.createServer((req, res) => {
-    const reqUrl = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
+    const addr = server.address();
+    const currentPort = typeof addr === 'object' && addr ? addr.port : requestedPort;
+    const reqUrl = new URL(req.url ?? '/', `http://127.0.0.1:${currentPort}`);
     const pathname = reqUrl.pathname;
     const acceptHeader = req.headers['accept'] ?? '';
     const mockStatusHeader = req.headers['x-mock-status'];
 
-    // CORS & Content-Type
     res.setHeader('Content-Type', 'application/json');
 
     // Forced status code via header override
@@ -86,7 +87,6 @@ export function createMockGitHubApiServer(options: MockApiServerOptions = {}) {
       const page = Number(reqUrl.searchParams.get('page') ?? '1');
       const perPage = Number(reqUrl.searchParams.get('per_page') ?? '100');
 
-      // Scenario simulation by repository name
       if (repo === 'repo-403') {
         res.writeHead(403);
         res.end(
@@ -121,7 +121,6 @@ export function createMockGitHubApiServer(options: MockApiServerOptions = {}) {
         return;
       }
 
-      // Generate items based on media type header
       const isStarJson = acceptHeader.includes('application/vnd.github.star+json');
       const items = [];
       const baseIndex = (page - 1) * perPage;
@@ -160,10 +159,11 @@ export function createMockGitHubApiServer(options: MockApiServerOptions = {}) {
 
   return {
     start: () =>
-      new Promise<void>((resolve) => {
-        server.listen(port, '127.0.0.1', () => {
+      new Promise<void>((resolve, reject) => {
+        server.listen(requestedPort, '127.0.0.1', () => {
           resolve();
         });
+        server.once('error', reject);
       }),
     stop: () =>
       new Promise<void>((resolve, reject) => {
@@ -172,7 +172,14 @@ export function createMockGitHubApiServer(options: MockApiServerOptions = {}) {
           else resolve();
         });
       }),
-    port,
-    baseUrl: `http://127.0.0.1:${port}`
+    get port() {
+      const addr = server.address();
+      return typeof addr === 'object' && addr ? addr.port : requestedPort;
+    },
+    get baseUrl() {
+      const addr = server.address();
+      const p = typeof addr === 'object' && addr ? addr.port : requestedPort;
+      return `http://127.0.0.1:${p}`;
+    }
   };
 }

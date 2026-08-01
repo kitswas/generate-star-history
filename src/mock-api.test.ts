@@ -4,7 +4,7 @@ import { createMockGitHubApiServer } from './mock-api.js';
 import { fetchSampledStargazers } from './fetcher.js';
 
 describe('MockGitHubApi Integration', () => {
-  const mockServer = createMockGitHubApiServer({ port: 9876 });
+  const mockServer = createMockGitHubApiServer({ port: 0 }); // Port 0 allows OS dynamic assignment
 
   beforeAll(async () => {
     await mockServer.start();
@@ -27,7 +27,6 @@ describe('MockGitHubApi Integration', () => {
     const octokit = github.getOctokit('mock-token', { baseUrl: mockServer.baseUrl });
     const stars = await fetchSampledStargazers('mock', 'repo-403', octokit, 250);
 
-    // Should gracefully return empty array without crashing
     expect(stars).toEqual([]);
   });
 

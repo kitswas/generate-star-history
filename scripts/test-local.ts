@@ -3,12 +3,18 @@ import * as path from 'node:path';
 import * as github from '@actions/github';
 import { createMockGitHubApiServer } from '../src/mock-api.js';
 import { fetchSampledStargazers } from '../src/fetcher.js';
-import { processStargazers, renderSvgChart, type ChartOptions } from '../src/chart.js';
+import {
+  processStargazers,
+  renderSvgChart,
+  type ChartOptions,
+  type RepositorySeries
+} from '../src/chart.js';
 
 async function generateLocalChart() {
   const isMockMode = process.env.MOCK === 'true';
   const token = process.env.GITHUB_TOKEN ?? 'mock-token';
-  const repoSlug = process.env.REPO || 'mock/repo-200';
+  const repoSlug =
+    process.env.REPO || (isMockMode ? 'mock/repo-200, mock/repo-large' : 'mock/repo-200');
   const outputPath = process.env.OUTPUT || 'assets/star-history-test.svg';
   const theme = (process.env.THEME || 'auto') as ChartOptions['theme'];
 
@@ -22,26 +28,41 @@ async function generateLocalChart() {
 
   try {
     if (!isMockMode && !process.env.GITHUB_TOKEN) {
-      console.log('ℹ️ No GITHUB_TOKEN provided. Generating chart using mock data...');
-      const mockData = [
-        { date: '2023-01-01T00:00:00Z', count: 150 },
-        { date: '2023-04-15T00:00:00Z', count: 800 },
-        { date: '2023-08-20T00:00:00Z', count: 2100 },
-        { date: '2024-01-10T00:00:00Z', count: 4500 },
-        { date: '2024-06-01T00:00:00Z', count: 8900 }
+      console.log('ℹ️ No GITHUB_TOKEN provided. Generating multi-series chart using mock data...');
+      const seriesList: RepositorySeries[] = [
+        {
+          name: 'kitswas/VirtualGamePad-PC',
+          data: processStargazers([
+            { date: '2023-01-01T00:00:00Z', count: 150 },
+            { date: '2023-04-15T00:00:00Z', count: 800 },
+            { date: '2023-08-20T00:00:00Z', count: 2100 },
+            { date: '2024-01-10T00:00:00Z', count: 4500 }
+          ])
+        },
+        {
+          name: 'kitswas/VirtualGamePad-Mobile',
+          data: processStargazers([
+            { date: '2023-02-01T00:00:00Z', count: 50 },
+            { date: '2023-05-15T00:00:00Z', count: 400 },
+            { date: '2023-09-20T00:00:00Z', count: 1200 },
+            { date: '2024-01-10T00:00:00Z', count: 3100 }
+          ])
+        }
       ];
 
-      const timeSeries = processStargazers(mockData);
-      const svg = renderSvgChart(timeSeries, { theme });
+      const svg = renderSvgChart(seriesList, { theme });
 
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
       await fs.writeFile(outputPath, svg, 'utf-8');
-      console.log(`✅ Mock SVG generated successfully at: ${outputPath}`);
+      console.log(`✅ Multi-series Mock SVG generated successfully at: ${outputPath}`);
       return;
     }
 
-    const [owner, repo] = repoSlug.split('/');
-    console.log(`🚀 Fetching star history for ${owner}/${repo}...`);
+    const repoList = repoSlug
+      .split(',')
+      .map((r) => r.trim())
+      .filter(Boolean);
+    console.log(`🚀 Fetching star history for: ${repoList.join(', ')}...`);
 
     const octokitOptions: Parameters<typeof github.getOctokit>[1] = {};
     if (isMockMode && mockServer) {
@@ -49,18 +70,27 @@ async function generateLocalChart() {
     }
 
     const octokit = github.getOctokit(token, octokitOptions);
+    const allSeries: RepositorySeries[] = [];
 
-    const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
-    const totalStars = repoData.stargazers_count;
+    for (const slug of repoList) {
+      const [owner, repo] = slug.split('/');
+      const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
+      const totalStars = repoData.stargazers_count;
 
-    const rawData = await fetchSampledStargazers(owner, repo, octokit, totalStars);
-    rawData.push({
-      date: new Date().toISOString(),
-      count: totalStars
-    });
+      const rawData = await fetchSampledStargazers(owner, repo, octokit, totalStars);
+      rawData.push({
+        date: new Date().toISOString(),
+        count: totalStars
+      });
 
-    const timeSeries = processStargazers(rawData);
-    const svg = renderSvgChart(timeSeries, { theme });
+      const timeSeries = processStargazers(rawData);
+      allSeries.push({
+        name: slug,
+        data: timeSeries
+      });
+    }
+
+    const svg = renderSvgChart(allSeries, { theme });
 
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, svg, 'utf-8');

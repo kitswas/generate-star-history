@@ -1,16 +1,17 @@
 # Generate Star History GitHub Action
 
-A lightweight, standalone TypeScript GitHub Action that generates responsive, mathematically calculated SVG star history charts for your repositories without external binary dependencies.
+A lightweight, standalone TypeScript GitHub Action that generates responsive, mathematically calculated SVG star history charts for your repositories with smooth CSS `@keyframes` line drawing animations and zero external binary dependencies.
 
 ![Star History Demo](assets/star-history-virtualgamepad.svg)
 
 ## Features
 
+- **Multi-Series Comparison Charting**: Pass a comma-separated repository list (`repository: 'owner/repo1, owner/repo2'`) to render multiple star trajectories on a single chart with a color-coded legend key.
+- **Pure CSS Keyframe Animations**: Includes `@keyframes draw` stroke-dasharray animations for smooth line drawing on load, and interactive `:hover` dot scaling.
 - **Rate Limit Resilience**: Built-in page-sampling algorithm that works safely on large repositories without burning your `${{ secrets.GITHUB_TOKEN }}`.
 - **Graceful Fallback**: Gracefully renders partial data if GitHub REST API rate limits are hit halfway.
 - **Zero Native Binaries**: Pure mathematical SVG generation (no D3, no Canvas, no C++ compilation).
 - **Themes**: Supports `dark`, `light`, and `auto` (uses system color scheme `@media (prefers-color-scheme)`).
-- **Multi-Repo Support**: Target any repository (`owner/repo`) within a single workflow.
 
 ---
 
@@ -18,12 +19,12 @@ A lightweight, standalone TypeScript GitHub Action that generates responsive, ma
 
 ### Inputs
 
-| Input          | Description                                   | Required | Default                    |
-| :------------- | :-------------------------------------------- | :------: | :------------------------- |
-| `github-token` | GitHub access token (`GITHUB_TOKEN` or `PAT`) | **Yes**  | `${{ github.token }}`      |
-| `repository`   | Target repository in `owner/repo` format      |    No    | `${{ github.repository }}` |
-| `output-path`  | Output path for the generated `.svg` file     |    No    | `assets/star-history.svg`  |
-| `theme`        | Chart theme (`auto`, `dark`, `light`)         |    No    | `auto`                     |
+| Input          | Description                                                            | Required | Default                    |
+| :------------- | :--------------------------------------------------------------------- | :------: | :------------------------- |
+| `github-token` | GitHub access token (`GITHUB_TOKEN` or `PAT`)                          | **Yes**  | `${{ github.token }}`      |
+| `repository`   | Target repository or comma-separated list (`owner/repo1, owner/repo2`) |    No    | `${{ github.repository }}` |
+| `output-path`  | Output path for the generated `.svg` file                              |    No    | `assets/star-history.svg`  |
+| `theme`        | Chart theme (`auto`, `dark`, `light`)                                  |    No    | `auto`                     |
 
 ### Outputs
 
@@ -77,12 +78,12 @@ jobs:
 
 ---
 
-### 2. Multi-Repository Setup (`VirtualGamePad` Suite)
+### 2. Multi-Repository Comparison on a Single Chart
 
-Place this workflow in `.github/workflows/generate-virtualgamepad-star-history.yml`:
+Compare multiple repositories on a single chart with a color-coded legend:
 
 ```yaml
-name: Generate VirtualGamePad Star History
+name: Generate Comparison Star History
 
 on:
   schedule:
@@ -90,35 +91,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  generate-charts:
+  generate-comparison:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
 
-      - name: Generate Star History (VirtualGamePad-PC)
+      - name: Generate Comparison Chart
         uses: kitswas/generate-star-history@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: 'kitswas/VirtualGamePad-PC'
-          output-path: 'assets/star-history-virtualgamepad-pc.svg'
-          theme: 'auto'
-
-      - name: Generate Star History (VirtualGamePad)
-        uses: kitswas/generate-star-history@v1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: 'kitswas/VirtualGamePad'
-          output-path: 'assets/star-history-virtualgamepad.svg'
-          theme: 'auto'
-
-      - name: Generate Star History (VirtualGamePad-Mobile)
-        uses: kitswas/generate-star-history@v1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: 'kitswas/VirtualGamePad-Mobile'
-          output-path: 'assets/star-history-virtualgamepad-mobile.svg'
+          repository: 'kitswas/VirtualGamePad-PC, kitswas/VirtualGamePad-Mobile'
+          output-path: 'assets/star-history-comparison.svg'
           theme: 'auto'
 
       - name: Commit and Push
@@ -129,7 +114,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update star history charts [skip ci]"
+            git commit -m "chore: update comparison star history chart [skip ci]"
             git push
           fi
 ```
@@ -141,11 +126,14 @@ jobs:
 You can test chart generation locally without running a GitHub Action:
 
 ```bash
-# Offline mode (generates mock data SVG)
+# Offline single-repo mock mode
 pnpm test:local
 
-# Live mode (fetches real repository data)
-GITHUB_TOKEN="your_pat_token" REPO="facebook/react" THEME="dark" OUTPUT="assets/react.svg" pnpm test:local
+# Offline multi-series mock mode
+MOCK=true REPO="mock/repo-200, mock/repo-large" pnpm test:local
+
+# Live mode
+GITHUB_TOKEN="your_pat_token" REPO="facebook/react, vuejs/core" THEME="dark" OUTPUT="assets/comparison.svg" pnpm test:local
 ```
 
 ### Development Commands
@@ -154,6 +142,7 @@ GITHUB_TOKEN="your_pat_token" REPO="facebook/react" THEME="dark" OUTPUT="assets/
 pnpm typecheck # TypeScript compilation check
 pnpm lint      # Lint codebase
 pnpm test      # Run Vitest unit tests
+pnpm test:fuzz # Run property-based fuzz tests
 pnpm depcruise # Verify circular dependency constraints
 pnpm build     # Build production bundle using @vercel/ncc
 ```
