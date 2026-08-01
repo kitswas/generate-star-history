@@ -50,17 +50,28 @@ export function processStargazers(stars: { date: string; count: number }[]): Tim
 /**
  * Renders the SVG chart mathematically
  */
-export function renderSvgChart(data: TimeSeriesPoint[], options: ChartOptions): string {
+export function renderSvgChart(dataInput: TimeSeriesPoint[], options: ChartOptions): string {
   const width = 800;
   const height = 400;
   const padding = { top: 40, right: 40, bottom: 60, left: 60 };
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
 
-  if (data.length === 0) {
+  if (dataInput.length === 0) {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="auto">
       <text x="${width / 2}" y="${height / 2}" text-anchor="middle" font-family="sans-serif">No data available</text>
     </svg>`;
+  }
+
+  // Clone data array
+  let data = [...dataInput];
+
+  // If only 1 data point exists, prepend a baseline 0 point from 1 day prior
+  if (data.length === 1) {
+    const prevDate = new Date(data[0].date);
+    prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+    const prevDateStr = prevDate.toISOString().split('T')[0];
+    data = [{ date: prevDateStr, count: 0 }, ...data];
   }
 
   const maxCount = Math.max(...data.map((d) => d.count), 10);
@@ -78,10 +89,17 @@ export function renderSvgChart(data: TimeSeriesPoint[], options: ChartOptions): 
     return padding.top + innerHeight - (count / maxCount) * innerHeight;
   };
 
-  // Generate Path
+  // Generate Path & Dots
   let pathD = `M ${scaleX(data[0].date)} ${scaleY(data[0].count)}`;
+  let dotsMarkup = '';
+
   for (let i = 0; i < data.length; i++) {
-    pathD += ` L ${scaleX(data[i].date)} ${scaleY(data[i].count)}`;
+    const cx = scaleX(data[i].date);
+    const cy = scaleY(data[i].count);
+    if (i > 0) {
+      pathD += ` L ${cx} ${cy}`;
+    }
+    dotsMarkup += `<circle cx="${cx}" cy="${cy}" r="3" class="dot" />`;
   }
 
   const areaD = `${pathD} L ${scaleX(data[data.length - 1].date)} ${scaleY(0)} L ${scaleX(data[0].date)} ${scaleY(0)} Z`;
@@ -107,14 +125,16 @@ export function renderSvgChart(data: TimeSeriesPoint[], options: ChartOptions): 
       .bg { fill: #ffffff; }
       .text { fill: #333333; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 12px; }
       .grid { stroke: #e1e4e8; stroke-width: 1; stroke-dasharray: 4; }
-      .line { stroke: #0366d6; stroke-width: 2; fill: none; }
+      .line { stroke: #0366d6; stroke-width: 2; fill: none; stroke-linecap: round; }
       .area { fill: #0366d6; fill-opacity: 0.1; }
+      .dot { fill: #0366d6; }
       @media (prefers-color-scheme: dark) {
         .bg { fill: #0d1117; }
         .text { fill: #c9d1d9; }
         .grid { stroke: #30363d; }
         .line { stroke: #58a6ff; }
         .area { fill: #58a6ff; fill-opacity: 0.1; }
+        .dot { fill: #58a6ff; }
       }
     </style>
   `
@@ -123,8 +143,9 @@ export function renderSvgChart(data: TimeSeriesPoint[], options: ChartOptions): 
       .bg { fill: ${bg}; }
       .text { fill: ${textPrimary}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 12px; }
       .grid { stroke: ${gridLine}; stroke-width: 1; stroke-dasharray: 4; }
-      .line { stroke: ${primary}; stroke-width: 2; fill: none; }
+      .line { stroke: ${primary}; stroke-width: 2; fill: none; stroke-linecap: round; }
       .area { fill: ${primary}; fill-opacity: 0.1; }
+      .dot { fill: ${primary}; }
     </style>
   `;
 
@@ -152,5 +173,6 @@ export function renderSvgChart(data: TimeSeriesPoint[], options: ChartOptions): 
   <g class="labels">${xLabels}</g>
   <path d="${areaD}" class="area" />
   <path d="${pathD}" class="line" />
+  <g class="dots">${dotsMarkup}</g>
 </svg>`;
 }
