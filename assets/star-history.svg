@@ -1,4 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="auto">
-      <rect width="100%" height="100%" fill="#ffffff" />
-      <text x="400" y="200" text-anchor="middle" font-family="sans-serif" fill="#666666">No data available</text>
-    </svg>
+  
+    <style>
+      .bg { fill: #ffffff; }
+      .text { fill: #333333; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 12px; }
+      .grid { stroke: #e1e4e8; stroke-width: 1; stroke-dasharray: 4; }
+      .line-anim {
+        stroke-dasharray: 2000;
+        stroke-dashoffset: 2000;
+        animation: draw 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      .dot {
+        transition: transform 0.2s ease, r 0.2s ease;
+        cursor: pointer;
+      }
+      .dot:hover {
+        r: 6px;
+      }
+      @keyframes draw {
+        to { stroke-dashoffset: 0; }
+      }
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #0d1117; }
+        .text { fill: #c9d1d9; }
+        .grid { stroke: #30363d; }
+      }
+    </style>
+  
+  <rect width="100%" height="100%" class="bg" />
+  
+  <g class="grids">
+      <line x1="60" y1="340" x2="760" y2="340" class="grid" />
+      <text x="50" y="344" class="text" text-anchor="end">0</text>
+    
+      <line x1="60" y1="280" x2="760" y2="280" class="grid" />
+      <text x="50" y="284" class="text" text-anchor="end">2</text>
+    
+      <line x1="60" y1="220" x2="760" y2="220" class="grid" />
+      <text x="50" y="224" class="text" text-anchor="end">4</text>
+    
+      <line x1="60" y1="160" x2="760" y2="160" class="grid" />
+      <text x="50" y="164" class="text" text-anchor="end">6</text>
+    
+      <line x1="60" y1="100" x2="760" y2="100" class="grid" />
+      <text x="50" y="104" class="text" text-anchor="end">8</text>
+    
+      <line x1="60" y1="40" x2="760" y2="40" class="grid" />
+      <text x="50" y="44" class="text" text-anchor="end">10</text>
+    </g>
+  <g class="labels"><text x="60" y="380" class="text" text-anchor="middle">2026-07-31</text><text x="760" y="380" class="text" text-anchor="middle">2026-08-01</text></g>
+  
+      <g class="series-group series-0">
+        <path d="M 60 340 L 760 310 L 760 340 L 60 340 Z" fill="#0366d6" fill-opacity="0.08" class="area" />
+        <path d="M 60 340 L 760 310" stroke="#0366d6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="line line-anim" />
+        <g class="dots"><circle cx="60" cy="340" r="3" fill="#0366d6" class="dot" /><circle cx="760" cy="310" r="3" fill="#0366d6" class="dot" /></g>
+      </g>
+    
+</svg>
