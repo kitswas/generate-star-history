@@ -16,23 +16,25 @@ This action runs directly inside your workflow using your repository's own `${{ 
 
 ## Overview
 
-| 🔒 Security & Privacy                                                    | ⚡ Performance & Architecture                                                    | 🛠️ Features                                                                    |
+| 🔒 Security & Privacy                                                    | ⚡ Performance & Architecture                                                    | ✔️ Features                                                                    |
 | :----------------------------------------------------------------------- | :------------------------------------------------------------------------------- | :----------------------------------------------------------------------------- |
 | **Self-Hosted**: Runs 100% inside your runner; tokens never leave GitHub | **Single SVG**: Theme switching via embedded CSS `@media (prefers-color-scheme)` | **Multi-Repo**: Chart multiple repos side-by-side (`owner/repo1, owner/repo2`) |
-| **No Bot Accounts**: No third-party apps or permissions required         | **Monotone Spline**: Smooth Fritsch-Carlson cubic curves (~12KB SVG size)        | **Keyframe Animations**: Animated line drawing on load with hover scaling      |
+| **No Bot Accounts**: No third-party apps or permissions required         | **Monotone Spline**: Smooth Fritsch-Carlson cubic curves (small SVG size)        | **Keyframe Animations**: Animated line drawing on load with hover scaling      |
 | **Zero Runtime Deps**: Pure TypeScript bundle; zero supply-chain risk    | **Smart Sampling**: Page-sampling engine avoids hitting API rate limits          | **Adaptive Density**: Hides crowded data points automatically below 15px       |
 
 ---
 
 ## Competitor Comparison
 
-| Feature                  | **Generate Star History**  |    `shieldcn-starchart`    | `self-hosted-repository-visuals` |   `star-history-action`    |
-| :----------------------- | :------------------------: | :------------------------: | :------------------------------: | :------------------------: |
-| **Infrastructure**       |        Self-Hosted         | Cloud Bot (`shieldcn.dev`) |           Self-Hosted            |        Self-Hosted         |
-| **Output**               | **Single Auto-Theme SVG**  |        Hosted Image        |    2 Files (`-light`/`-dark`)    | 2 Files (`-light`/`-dark`) |
-| **Runtime Dependencies** |          **Zero**          |          Unknown           |           npm Packages           |     Puppeteer / sharp      |
-| **Multi-Repo Support**   |         **Native**         |             ❌             |                ❌                |         ⚠️ Partial         |
-| **Git Safety**           | **Commits SVG chart Only** |             ✅             |                ✅                |  ❌ Modifies `README.md`   |
+| Feature                                | **Generate Star History**  |    `shieldcn-starchart`    | `self-hosted-repository-visuals` |   `star-history-action`    |
+| :------------------------------------- | :------------------------: | :------------------------: | :------------------------------: | :------------------------: |
+| **Infrastructure**                     |      **Self-Hosted**       | Cloud Bot (`shieldcn.dev`) |           Self-Hosted            |        Self-Hosted         |
+| **Output**                             | **Single Auto-Theme SVG**  |        Hosted Image        |    2 Files (`-light`/`-dark`)    | 2 Files (`-light`/`-dark`) |
+| **Runtime Dependencies**               |          **Zero**          |          Unknown           |           npm Packages           |     Puppeteer / sharp      |
+| **Multi-Repo Support**                 |        **Built-in**        |             ❌             |                ❌                |         ⚠️ Partial         |
+| **Git Safety**                         | **Commits SVG chart Only** |             ✅             |                ✅                |  ❌ Modifies `README.md`   |
+| **Custom Hex Theme Overrides**         |       ❌ _3 Presets_       |      ⚠️ Shadcn preset      |   ✅ **Full Color Overrides**    |     ❌ _Fixed Themes_      |
+| **Incremental State (`history.json`)** |  ❌ _On-the-fly REST API_  |     ⚠️ Cloud buffered      |   ✅ **Incremental JSON Log**    |  ❌ _On-the-fly REST API_  |
 
 ---
 
@@ -52,7 +54,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Generate Star History
         uses: kitswas/generate-star-history@v1
