@@ -77,3 +77,7 @@ SVG generation is done via pure mathematical coordinate computation (no D3, no C
 ### Dynamic port assignment in MockGitHubApi
 
 `MockGitHubApi` defaults to `port: 0` to let the OS assign a free port. This prevents `EADDRINUSE` errors when Vitest runs test files in parallel workers, each starting their own mock server instance.
+
+### Automated Git Log Release Notes
+
+The release workflow (`.github/workflows/release.yml`) automatically derives release notes by computing `git log` between the prior tag (`git describe --tags --abbrev=0 "${RELEASE_TAG}^"`) and the release tag. Notes are published to GitHub Releases via native GitHub CLI (`gh release create`) and appended to `$GITHUB_STEP_SUMMARY`.

@@ -3,13 +3,12 @@ name: Release Action & Update Major Tag
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag name to release (e.g. v1.0.0)'
+        description: "Tag name to release (e.g. v1.0.0)"
         required: true
-        default: 'v1.0.0'
 
 jobs:
   release:
@@ -49,3 +48,38 @@ jobs:
         run: |
           git tag -f v1
           git push origin v1 --force
+
+      - name: Generate Release Notes from Git Log
+        id: release_notes
+        run: |
+          RELEASE_TAG="${{ inputs.tag_name || github.ref_name }}"
+          PREV_TAG=$(git describe --tags --abbrev=0 "${RELEASE_TAG}^" 2>/dev/null || echo "")
+
+          echo "# Release Notes for ${RELEASE_TAG}" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+
+          if [ -n "$PREV_TAG" ]; then
+            echo "## Changes since ${PREV_TAG}" >> RELEASE_NOTES.md
+            LOG_RANGE="${PREV_TAG}..${RELEASE_TAG}"
+          else
+            echo "## Initial Release Changes" >> RELEASE_NOTES.md
+            LOG_RANGE="${RELEASE_TAG}"
+          fi
+          echo "" >> RELEASE_NOTES.md
+
+          git log ${LOG_RANGE} --pretty=format:"* %s ([%h](https://github.com/${{ github.repository }}/commit/%H))" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+
+          # Append to GitHub Workflow Summary
+          cat RELEASE_NOTES.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Create or Update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE_TAG="${{ inputs.tag_name || github.ref_name }}"
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release edit "${RELEASE_TAG}" --notes-file RELEASE_NOTES.md
+          else
+            gh release create "${RELEASE_TAG}" --title "${RELEASE_TAG}" --notes-file RELEASE_NOTES.md
+          fi
