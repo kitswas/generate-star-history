@@ -4,7 +4,8 @@ import {
   renderSvgChart,
   calculateYAxisTicks,
   formatYTickLabel,
-  generateMonotoneCubicPath
+  generateMonotoneCubicPath,
+  simplifySeriesData
 } from './chart.js';
 
 describe('ChartRenderer', () => {
@@ -126,6 +127,17 @@ describe('ChartRenderer', () => {
       expect(svg).not.toContain('<g class="dots">');
       expect(svg).not.toContain('<circle');
       expect(svg).toContain(' C ');
+    });
+
+    it('simplifies 100 flat daily points down to key change points', () => {
+      const flatPoints = Array.from({ length: 100 }, (_, i) => {
+        const d = new Date(2023, 0, 1 + i).toISOString().split('T')[0];
+        return { date: d, count: i < 50 ? 10 : 20 };
+      });
+      const simplified = simplifySeriesData(flatPoints);
+      expect(simplified.length).toBeLessThan(10);
+      expect(simplified[0].count).toBe(10);
+      expect(simplified[simplified.length - 1].count).toBe(20);
     });
   });
 });

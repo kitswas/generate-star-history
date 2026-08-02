@@ -34,6 +34,10 @@ A horizontal distance boundary ($< 15\text{px}$ average spacing between consecut
 
 Fritsch-Carlson monotone cubic spline interpolation algorithm implemented in `generateMonotoneCubicPath` (`src/chart.ts`). Computes cubic Bezier `C` path instructions for dense series that preserve monotonic trends without overshooting or undershooting data bounds.
 
+### SeriesSimplification
+
+The process of filtering daily step-function time-series points down to key star growth change points (`simplifySeriesData` in `src/chart.ts`). Prunes redundant intermediate flat-run nodes prior to spline generation, preventing staircase jitter and reducing SVG file size by ~95%.
+
 ### StargazerFetcher
 
 The deep module in `src/fetcher.ts`. Exposes two seams:

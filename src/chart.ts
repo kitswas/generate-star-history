@@ -115,6 +115,45 @@ export function generateMonotoneCubicPath(points: { x: number; y: number }[]): s
 }
 
 /**
+ * Simplifies daily time-series points for smooth curve interpolation by retaining
+ * only key star growth change points and range endpoints.
+ */
+export function simplifySeriesData(data: TimeSeriesPoint[]): TimeSeriesPoint[] {
+  if (!Array.isArray(data) || data.length <= 2) return data;
+
+  const simplified: TimeSeriesPoint[] = [data[0]];
+
+  for (let i = 1; i < data.length - 1; i++) {
+    const prev = data[i - 1];
+    const curr = data[i];
+    const next = data[i + 1];
+
+    // Retain point if star count changed from previous day or is about to change next day
+    if (curr.count !== prev.count || curr.count !== next.count) {
+      simplified.push(curr);
+    }
+  }
+
+  simplified.push(data[data.length - 1]);
+
+  // Deduplicate consecutive identical points
+  const result: TimeSeriesPoint[] = [simplified[0]];
+  for (let i = 1; i < simplified.length - 1; i++) {
+    const prev = simplified[i - 1];
+    const curr = simplified[i];
+    const next = simplified[i + 1];
+
+    if (prev.count === curr.count && curr.count === next.count) {
+      continue;
+    }
+    result.push(curr);
+  }
+  result.push(simplified[simplified.length - 1]);
+
+  return result;
+}
+
+/**
  * Calculates neat power-of-ten Y-axis ticks and upper bound for a given peak star count.
  */
 export function calculateYAxisTicks(maxRawCount: number): { yMax: number; ticks: number[] } {
@@ -360,7 +399,8 @@ export function renderChart(
   }
 
   normalizedSeries.forEach((s, sIdx) => {
-    const points = s.data.map((d) => ({
+    const simplifiedData = simplifySeriesData(s.data);
+    const points = simplifiedData.map((d) => ({
       x: scaleX(d.date),
       y: scaleY(d.count)
     }));
