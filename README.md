@@ -2,7 +2,17 @@
 
 A lightweight, standalone TypeScript GitHub Action that generates responsive, mathematically calculated SVG star history charts for your repositories with smooth CSS `@keyframes` line drawing animations and zero external binary dependencies.
 
+## Star History for this repo
+
 ![Star History Demo](assets/star-history.svg)
+
+Workflow path: [.github/workflows/generate-star-history.yml](./.github/workflows/generate-star-history.yml)
+
+## Multi-Repo Star History example
+
+![Multi-repo Star History Demo](assets/star-history-virtualgamepad.svg)
+
+Workflow path: [.github/workflows/generate-virtualgamepad-star-history.yml](./.github/workflows/generate-virtualgamepad-star-history.yml)
 
 ## Features
 
