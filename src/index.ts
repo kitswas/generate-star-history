@@ -1,3 +1,17 @@
+/**
+ * @module generate-star-history
+ *
+ * GitHub Action entry point and public re-export surface.
+ *
+ * Public API (re-exported for use in scripts and tests):
+ * - `fetchStarHistory`  — deep `StargazerFetcher` entry point (see `src/fetcher.ts`)
+ * - `renderChart`       — deep `ChartRenderer` entry point (see `src/chart.ts`)
+ * - `processStargazers` — internal time-series interpolator (re-exported for fuzz tests)
+ * - `renderSvgChart`    — deprecated alias for `renderChart`
+ *
+ * The `run()` function below is the sole side-effectful orchestrator; it is never
+ * called during testing (`NODE_ENV !== 'test'`).
+ */
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as fs from 'node:fs/promises';
@@ -15,7 +29,9 @@ export { fetchStarHistory, renderChart, processStargazers, renderSvgChart };
 export type { ChartOptions, RepositorySeries };
 
 /**
- * Main Action Execution Orchestrator - Non-leaky 10-line runner
+ * GitHub Actions runner. Reads action inputs, delegates to the two deep modules,
+ * and writes the SVG output file. All implementation complexity lives in
+ * `fetchStarHistory` and `renderChart` — this function intentionally has no logic.
  */
 async function run() {
   try {
@@ -27,7 +43,6 @@ async function run() {
     const octokit = github.getOctokit(token);
     const context = github.context;
 
-    // Deep modules: fetchStarHistory hides multi-repo orchestration & data aggregation; renderChart hides SVG generation
     const series = await fetchStarHistory(
       targetRepoInput,
       octokit,

@@ -1,15 +1,29 @@
+/** A daily aggregated data point produced by processStargazers. */
 export interface TimeSeriesPoint {
-  date: string; // YYYY-MM-DD
+  /** ISO date string in YYYY-MM-DD format. */
+  date: string;
+  /** Cumulative star count on this day. Days with no new stars carry the previous count forward. */
   count: number;
 }
 
+/** A named time-series representing a single repository's star history. */
 export interface RepositorySeries {
+  /** Full repository slug, e.g. "owner/repo". Used for the chart legend label. */
   name: string;
+  /** Override the auto-assigned color from the default palette. */
   color?: string;
+  /** Ordered daily time-series data points from processStargazers. */
   data: TimeSeriesPoint[];
 }
 
+/** Caller-visible configuration surface for the ChartRenderer. */
 export interface ChartOptions {
+  /**
+   * Chart color theme.
+   * - `'auto'`: Respects the viewer's system `prefers-color-scheme` media query.
+   * - `'dark'`: Forces dark background (#0d1117).
+   * - `'light'`: Forces light background (#ffffff).
+   */
   theme: 'dark' | 'light' | 'auto';
 }
 
@@ -36,7 +50,13 @@ function isValidIsoDate(dateStr: unknown): boolean {
 }
 
 /**
- * Transforms sparse data points into a daily cumulative series with interpolation
+ * Transforms sparse `RawStarPoint[]` records into a smooth daily cumulative `TimeSeriesPoint[]` time series.
+ *
+ * - Filters out invalid or out-of-range ISO dates (year 2000–2100).
+ * - Sorts chronologically and backfills intermediate days with the last known count.
+ * - Caps the date range at 3650 days (10 years) to prevent excessive iteration.
+ *
+ * @internal Used by `fetchStarHistory` in StargazerFetcher — not intended as a standalone public entry point.
  */
 export function processStargazers(stars: { date: string; count: number }[]): TimeSeriesPoint[] {
   if (!Array.isArray(stars) || stars.length === 0) return [];
@@ -100,7 +120,20 @@ export function processStargazers(stars: { date: string; count: number }[]): Tim
 }
 
 /**
- * Deep ChartEngine entry point: Renders SVG chart mathematically with animation and multi-series support
+ * Deep ChartRenderer entry point. Converts one or more repository star-history series into a
+ * fully self-contained, animated SVG string ready to write to disk.
+ *
+ * Accepts either:
+ * - A single `TimeSeriesPoint[]` (legacy single-repo mode)
+ * - A `RepositorySeries[]` (multi-repo comparison mode)
+ *
+ * Hides all implementation complexity — baseline prepending, date sanitization, color palette
+ * distribution, coordinate scaling, legend badge generation, and CSS `@keyframes draw`
+ * stroke-dasharray animation embedding.
+ *
+ * @param inputData - One or more repository time-series. Accepts both legacy and multi-series inputs.
+ * @param options   - Optional chart display options (theme). Defaults to `{ theme: 'auto' }`.
+ * @returns         A complete, UTF-8 encoded SVG string.
  */
 export function renderChart(
   inputData: TimeSeriesPoint[] | RepositorySeries[],
@@ -321,5 +354,8 @@ export function renderChart(
 </svg>`;
 }
 
-// Backwards compatibility alias
+/**
+ * Backwards-compatibility alias for `renderChart`.
+ * @deprecated Use `renderChart` directly.
+ */
 export const renderSvgChart = renderChart;

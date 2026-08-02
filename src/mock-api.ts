@@ -1,12 +1,33 @@
 import * as http from 'node:http';
 import { URL } from 'node:url';
 
+/** Configuration options for `createMockGitHubApiServer`. */
 export interface MockApiServerOptions {
+  /**
+   * TCP port to listen on. Defaults to `0`, which asks the OS to assign a free
+   * ephemeral port — preventing `EADDRINUSE` collisions when Vitest runs test
+   * files in parallel workers.
+   */
   port?: number;
 }
 
 /**
- * Zero-dependency Mock GitHub REST API HTTP server
+ * Creates a zero-dependency mock GitHub REST API HTTP server using Node's native `http` module.
+ *
+ * Simulates the following GitHub REST endpoints used by `StargazerFetcher`:
+ * - `GET /repos/{owner}/{repo}` — returns repo metadata including `stargazers_count`.
+ * - `GET /repos/{owner}/{repo}/stargazers` — returns paginated stargazer records.
+ *
+ * Repo slugs are mapped to fixed scenarios via their name:
+ * - `mock/repo-200`  — `200 OK` with `application/vnd.github.star+json` records
+ * - `mock/repo-large` — `200 OK` with 5000 stars across 50 pages
+ * - `mock/repo-403`  — `403 Forbidden` (permission error)
+ * - `mock/repo-422`  — `422 Unprocessable Entity` (spammed endpoint)
+ * - `mock/repo-429`  — `429 Too Many Requests` (rate limited)
+ * - `mock/repo-empty` — `200 OK` with 0 stars
+ *
+ * @param options - Optional server configuration.
+ * @returns An object with `start()`, `stop()`, and `baseUrl` members.
  */
 export function createMockGitHubApiServer(options: MockApiServerOptions = {}) {
   const requestedPort = options.port ?? 0; // Default 0 for dynamic OS port assignment

@@ -2,15 +2,31 @@ import * as core from '@actions/core';
 import type * as github from '@actions/github';
 import { processStargazers, type RepositorySeries, type TimeSeriesPoint } from './chart.js';
 
+/**
+ * A single record from the GitHub stargazers API containing a timestamp and 1-based ordinal index.
+ * Produced by `fetchSampledStargazers` and consumed by `processStargazers`.
+ */
 export interface RawStarPoint {
+  /** ISO 8601 timestamp of the star event (`starred_at`). */
   date: string;
+  /** 1-based chronological index of this stargazer relative to total stars. */
   count: number;
 }
 
+/** Narrowed Octokit instance type — the return value of `github.getOctokit()`. */
 export type OctokitInstance = ReturnType<typeof github.getOctokit>;
 
 /**
- * Calculates page numbers to sample given total pages
+ * Computes which page numbers to fetch given a total page count and a max-pages budget.
+ *
+ * When `totalPages <= maxPages` all pages are fetched sequentially.
+ * When `totalPages > maxPages` a uniform-stride sample is chosen that always
+ * includes the first and last page, guaranteeing the oldest and newest star events
+ * are represented in the chart even for very large repositories.
+ *
+ * @param totalPages - Total number of 100-item pages in the repository's stargazer list.
+ * @param maxPages   - Maximum number of pages to fetch. Defaults to 30.
+ * @returns          - Sorted, deduplicated array of 1-based page numbers.
  */
 export function calculatePagesToFetch(totalPages: number, maxPages = 30): number[] {
   if (totalPages <= maxPages) {
@@ -29,7 +45,20 @@ export function calculatePagesToFetch(totalPages: number, maxPages = 30): number
 }
 
 /**
- * Deep module fetching sampled stargazers with rate-limit recovery
+ * Fetches and samples paginated stargazer records for a single repository.
+ *
+ * Tries Tier 1 (`application/vnd.github.star+json`) first to obtain `starred_at` timestamps.
+ * On a per-page 403/4xx failure falls back to Tier 2 (`application/vnd.github+json`).
+ * On a total failure emits an `::warning::` annotation and prints actionable permission
+ * diagnostics when the error message contains "Resource not accessible".
+ *
+ * @param owner      - Repository owner (user or org).
+ * @param repo       - Repository name.
+ * @param octokit    - Authenticated Octokit instance.
+ * @param totalStars - Total stargazer count used to calculate page distribution.
+ * @returns          - Sampled `RawStarPoint[]`, possibly partial on API error.
+ *
+ * @internal Prefer `fetchStarHistory` for the public deep-module entry point.
  */
 export async function fetchSampledStargazers(
   owner: string,
@@ -111,7 +140,23 @@ export async function fetchSampledStargazers(
 }
 
 /**
- * Deep unified entry point: Fetches, samples, and transforms stargazers for target repositories
+ * Deep `StargazerFetcher` entry point. Parses one or more repository slugs, fetches their
+ * metadata and sampled stargazer history via the GitHub REST API, and returns a ready-to-render
+ * `RepositorySeries[]` array.
+ *
+ * Hides all implementation complexity behind a single call:
+ * - Comma-separated `owner/repo` input parsing
+ * - `GET /repos/{owner}/{repo}` total-star-count queries
+ * - Page-sampling budget calculation
+ * - Tier 1 / Tier 2 REST header fallbacks with permission diagnostics
+ * - Daily time-series interpolation via `processStargazers`
+ *
+ * @param targetRepoInput - Comma-separated repository slugs (e.g. `"owner/a, owner/b"`),
+ *                          or `undefined` to fall back to `defaultOwner/defaultRepo`.
+ * @param octokit         - Authenticated Octokit instance.
+ * @param defaultOwner    - Fallback owner when `targetRepoInput` is unset (typically `github.context.repo.owner`).
+ * @param defaultRepo     - Fallback repo name when `targetRepoInput` is unset.
+ * @returns               - Array of `RepositorySeries` ready to pass to `renderChart`.
  */
 export async function fetchStarHistory(
   targetRepoInput: string | undefined,

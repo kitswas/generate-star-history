@@ -36954,7 +36954,13 @@ function isValidIsoDate(dateStr) {
     }
 }
 /**
- * Transforms sparse data points into a daily cumulative series with interpolation
+ * Transforms sparse `RawStarPoint[]` records into a smooth daily cumulative `TimeSeriesPoint[]` time series.
+ *
+ * - Filters out invalid or out-of-range ISO dates (year 2000–2100).
+ * - Sorts chronologically and backfills intermediate days with the last known count.
+ * - Caps the date range at 3650 days (10 years) to prevent excessive iteration.
+ *
+ * @internal Used by `fetchStarHistory` in StargazerFetcher — not intended as a standalone public entry point.
  */
 function processStargazers(stars) {
     if (!Array.isArray(stars) || stars.length === 0)
@@ -37008,7 +37014,20 @@ function processStargazers(stars) {
     return result;
 }
 /**
- * Deep ChartEngine entry point: Renders SVG chart mathematically with animation and multi-series support
+ * Deep ChartRenderer entry point. Converts one or more repository star-history series into a
+ * fully self-contained, animated SVG string ready to write to disk.
+ *
+ * Accepts either:
+ * - A single `TimeSeriesPoint[]` (legacy single-repo mode)
+ * - A `RepositorySeries[]` (multi-repo comparison mode)
+ *
+ * Hides all implementation complexity — baseline prepending, date sanitization, color palette
+ * distribution, coordinate scaling, legend badge generation, and CSS `@keyframes draw`
+ * stroke-dasharray animation embedding.
+ *
+ * @param inputData - One or more repository time-series. Accepts both legacy and multi-series inputs.
+ * @param options   - Optional chart display options (theme). Defaults to `{ theme: 'auto' }`.
+ * @returns         A complete, UTF-8 encoded SVG string.
  */
 function renderChart(inputData, options) {
     const width = 800;
@@ -37199,14 +37218,26 @@ function renderChart(inputData, options) {
   ${seriesMarkup}
 </svg>`;
 }
-// Backwards compatibility alias
+/**
+ * Backwards-compatibility alias for `renderChart`.
+ * @deprecated Use `renderChart` directly.
+ */
 const renderSvgChart = renderChart;
 
 ;// CONCATENATED MODULE: ./dist-tsc/fetcher.js
 
 
 /**
- * Calculates page numbers to sample given total pages
+ * Computes which page numbers to fetch given a total page count and a max-pages budget.
+ *
+ * When `totalPages <= maxPages` all pages are fetched sequentially.
+ * When `totalPages > maxPages` a uniform-stride sample is chosen that always
+ * includes the first and last page, guaranteeing the oldest and newest star events
+ * are represented in the chart even for very large repositories.
+ *
+ * @param totalPages - Total number of 100-item pages in the repository's stargazer list.
+ * @param maxPages   - Maximum number of pages to fetch. Defaults to 30.
+ * @returns          - Sorted, deduplicated array of 1-based page numbers.
  */
 function calculatePagesToFetch(totalPages, maxPages = 30) {
     if (totalPages <= maxPages) {
@@ -37221,7 +37252,20 @@ function calculatePagesToFetch(totalPages, maxPages = 30) {
     return Array.from(new Set(pagesToFetch)).sort((a, b) => a - b);
 }
 /**
- * Deep module fetching sampled stargazers with rate-limit recovery
+ * Fetches and samples paginated stargazer records for a single repository.
+ *
+ * Tries Tier 1 (`application/vnd.github.star+json`) first to obtain `starred_at` timestamps.
+ * On a per-page 403/4xx failure falls back to Tier 2 (`application/vnd.github+json`).
+ * On a total failure emits an `::warning::` annotation and prints actionable permission
+ * diagnostics when the error message contains "Resource not accessible".
+ *
+ * @param owner      - Repository owner (user or org).
+ * @param repo       - Repository name.
+ * @param octokit    - Authenticated Octokit instance.
+ * @param totalStars - Total stargazer count used to calculate page distribution.
+ * @returns          - Sampled `RawStarPoint[]`, possibly partial on API error.
+ *
+ * @internal Prefer `fetchStarHistory` for the public deep-module entry point.
  */
 async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
     const totalPages = Math.ceil(totalStars / 100);
@@ -37284,7 +37328,23 @@ async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
     return rawData;
 }
 /**
- * Deep unified entry point: Fetches, samples, and transforms stargazers for target repositories
+ * Deep `StargazerFetcher` entry point. Parses one or more repository slugs, fetches their
+ * metadata and sampled stargazer history via the GitHub REST API, and returns a ready-to-render
+ * `RepositorySeries[]` array.
+ *
+ * Hides all implementation complexity behind a single call:
+ * - Comma-separated `owner/repo` input parsing
+ * - `GET /repos/{owner}/{repo}` total-star-count queries
+ * - Page-sampling budget calculation
+ * - Tier 1 / Tier 2 REST header fallbacks with permission diagnostics
+ * - Daily time-series interpolation via `processStargazers`
+ *
+ * @param targetRepoInput - Comma-separated repository slugs (e.g. `"owner/a, owner/b"`),
+ *                          or `undefined` to fall back to `defaultOwner/defaultRepo`.
+ * @param octokit         - Authenticated Octokit instance.
+ * @param defaultOwner    - Fallback owner when `targetRepoInput` is unset (typically `github.context.repo.owner`).
+ * @param defaultRepo     - Fallback repo name when `targetRepoInput` is unset.
+ * @returns               - Array of `RepositorySeries` ready to pass to `renderChart`.
  */
 async function fetchStarHistory(targetRepoInput, octokit, defaultOwner = '', defaultRepo = '') {
     const rawRepoList = targetRepoInput
@@ -37335,6 +37395,20 @@ async function fetchStarHistory(targetRepoInput, octokit, defaultOwner = '', def
 }
 
 ;// CONCATENATED MODULE: ./dist-tsc/index.js
+/**
+ * @module generate-star-history
+ *
+ * GitHub Action entry point and public re-export surface.
+ *
+ * Public API (re-exported for use in scripts and tests):
+ * - `fetchStarHistory`  — deep `StargazerFetcher` entry point (see `src/fetcher.ts`)
+ * - `renderChart`       — deep `ChartRenderer` entry point (see `src/chart.ts`)
+ * - `processStargazers` — internal time-series interpolator (re-exported for fuzz tests)
+ * - `renderSvgChart`    — deprecated alias for `renderChart`
+ *
+ * The `run()` function below is the sole side-effectful orchestrator; it is never
+ * called during testing (`NODE_ENV !== 'test'`).
+ */
 
 
 
@@ -37343,7 +37417,9 @@ async function fetchStarHistory(targetRepoInput, octokit, defaultOwner = '', def
 
 
 /**
- * Main Action Execution Orchestrator - Non-leaky 10-line runner
+ * GitHub Actions runner. Reads action inputs, delegates to the two deep modules,
+ * and writes the SVG output file. All implementation complexity lives in
+ * `fetchStarHistory` and `renderChart` — this function intentionally has no logic.
  */
 async function run() {
     try {
@@ -37353,7 +37429,6 @@ async function run() {
         const themeInput = (getInput('theme') || 'auto');
         const octokit = getOctokit(token);
         const context = github_context;
-        // Deep modules: fetchStarHistory hides multi-repo orchestration & data aggregation; renderChart hides SVG generation
         const series = await fetchStarHistory(targetRepoInput, octokit, context.repo.owner, context.repo.repo);
         const svg = renderChart(series, { theme: themeInput });
         await promises_namespaceObject.mkdir(external_node_path_namespaceObject.dirname(outputPath), { recursive: true });
