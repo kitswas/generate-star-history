@@ -1,116 +1,49 @@
-# Generate Star History GitHub Action
+# Generate Star History
 
-A lightweight, standalone TypeScript GitHub Action that generates responsive, mathematically calculated SVG star history charts for your repositories with smooth CSS `@keyframes` line drawing animations and zero external binary dependencies.
-
-## Star History for this repo
-
-![Star History Demo](assets/star-history.svg)
-
-Workflow path: [.github/workflows/generate-star-history.yml](./.github/workflows/generate-star-history.yml)
-
-## Multi-Repo Star History example
+A standalone GitHub Action that generates responsive, animated SVG star history charts with zero external cloud or binary dependencies.
 
 ![Multi-repo Star History Demo](assets/star-history-virtualgamepad.svg)
 
-Workflow path: [.github/workflows/generate-virtualgamepad-star-history.yml](./.github/workflows/generate-virtualgamepad-star-history.yml)
+---
 
-## Features
+## Why this exists
 
-- **Multi-Series Comparison Charting**: Pass a comma-separated repository list (`repository: 'owner/repo1, owner/repo2'`) to render multiple star trajectories on a single chart with a color-coded legend key.
-- **Pure CSS Keyframe Animations**: Includes `@keyframes draw` stroke-dasharray animations for smooth line drawing on load, and interactive `:hover` dot scaling.
-- **Rate Limit Resilience**: Built-in page-sampling algorithm that works safely on large repositories without burning your token.
-- **Graceful Fallback**: Gracefully renders partial data if GitHub REST API rate limits are hit halfway.
-- **Zero Native Binaries**: Pure mathematical SVG generation (no D3, no Canvas, no C++ compilation).
-- **Themes**: Supports `dark`, `light`, and `auto` (uses system color scheme `@media (prefers-color-scheme)`).
+Following GitHub's [June 30, 2026 API restrictions](https://github.blog/changelog/2026-06-30-upcoming-access-restrictions-to-public-api-endpoints-and-ui-views/), public stargazer endpoints require collaborator-level API access. As a result, external image badges like `star-history.com` no longer work without collaborator permissions ([details](https://www.star-history.com/blog/github-stargazer-api-restriction)).
+
+This action runs directly inside your workflow using your repository's own `${{ secrets.GITHUB_TOKEN }}`. _(Multi-Repo requires a Fine-Grained PAT to repos you own.)_
 
 ---
 
-## Action Inputs & Outputs
+## Overview
 
-### Inputs
-
-| Input          | Description                                                                                                                                                                                                                      | Required | Default                    |
-| :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------: | :------------------------- |
-| `github-token` | GitHub access token (`GITHUB_TOKEN` or `PAT`). **Required** for all API calls per [GitHub API Access Restrictions](https://github.blog/changelog/2026-06-30-upcoming-access-restrictions-to-public-api-endpoints-and-ui-views/). | **Yes**  | `${{ github.token }}`      |
-| `repository`   | Target repository or comma-separated list (`owner/repo1, owner/repo2`)                                                                                                                                                           |    No    | `${{ github.repository }}` |
-| `output-path`  | Workspace-relative output path for the generated `.svg` file                                                                                                                                                                     |    No    | `assets/star-history.svg`  |
-| `theme`        | Chart theme (`auto`, `dark`, `light`)                                                                                                                                                                                            |    No    | `auto`                     |
-
-### Outputs
-
-| Output     | Description                                            |
-| :--------- | :----------------------------------------------------- |
-| `svg-path` | Absolute/relative file path to the generated SVG chart |
+| 🔒 Security & Privacy                                                    | ⚡ Performance & Architecture                                                    | 🛠️ Features                                                                    |
+| :----------------------------------------------------------------------- | :------------------------------------------------------------------------------- | :----------------------------------------------------------------------------- |
+| **Self-Hosted**: Runs 100% inside your runner; tokens never leave GitHub | **Single SVG**: Theme switching via embedded CSS `@media (prefers-color-scheme)` | **Multi-Repo**: Chart multiple repos side-by-side (`owner/repo1, owner/repo2`) |
+| **No Bot Accounts**: No third-party apps or permissions required         | **Monotone Spline**: Smooth Fritsch-Carlson cubic curves (~12KB SVG size)        | **Keyframe Animations**: Animated line drawing on load with hover scaling      |
+| **Zero Runtime Deps**: Pure TypeScript bundle; zero supply-chain risk    | **Smart Sampling**: Page-sampling engine avoids hitting API rate limits          | **Adaptive Density**: Hides crowded data points automatically below 15px       |
 
 ---
 
-## GitHub REST APIs & Authentication Guide
+## Competitor Comparison
 
-This action calls GitHub REST API endpoints. An authenticated token (`github-token`) is **required** for all API calls following the [GitHub API Access Restrictions](https://github.blog/changelog/2026-06-30-upcoming-access-restrictions-to-public-api-endpoints-and-ui-views/).
-
-### Endpoints Used
-
-1. **`GET /repos/{owner}/{repo}`**
-   - **Purpose:** Fetches repository metadata and total stargazer count (`stargazers_count`).
-   - **Required Permission:** `Metadata` (Read-only).
-
-2. **`GET /repos/{owner}/{repo}/stargazers`**
-   - **Purpose:** Fetches paginated stargazer timestamps (`starred_at`) with the `application/vnd.github.star+json` media header.
-   - **Required Permission:** `Starring` (Read-only), `Metadata` (Read-only), and `Contents` (Read & Write).
+| Feature                  | **Generate Star History**  |    `shieldcn-starchart`    | `self-hosted-repository-visuals` |   `star-history-action`    |
+| :----------------------- | :------------------------: | :------------------------: | :------------------------------: | :------------------------: |
+| **Infrastructure**       |        Self-Hosted         | Cloud Bot (`shieldcn.dev`) |           Self-Hosted            |        Self-Hosted         |
+| **Output**               | **Single Auto-Theme SVG**  |        Hosted Image        |    2 Files (`-light`/`-dark`)    | 2 Files (`-light`/`-dark`) |
+| **Runtime Dependencies** |          **Zero**          |          Unknown           |           npm Packages           |     Puppeteer / sharp      |
+| **Multi-Repo Support**   |         **Native**         |             ❌             |                ❌                |         ⚠️ Partial         |
+| **Git Safety**           | **Commits SVG chart Only** |             ✅             |                ✅                |  ❌ Modifies `README.md`   |
 
 ---
 
-### Authentication Token Setup
-
-#### 1. Default `${{ secrets.GITHUB_TOKEN }}` (Current Repository)
-
-For generating charts for the repository where the workflow is running, no extra setup is needed. Ensure your workflow has `contents: write` permission to commit the output SVG:
-
-```yaml
-permissions:
-  contents: write
-```
-
-#### 2. Fine-Grained Personal Access Token (PAT) (Cross-Repository)
-
-If targeting **other/external repositories** (e.g. `repository: 'kitswas/VirtualGamePad-PC, kitswas/VirtualGamePad-Mobile'`), create a Fine-grained PAT with:
-
-- **Repository Access**: Select _All repositories_ (or explicitly add target repositories).
-- **User Permissions**:
-  - **Starring**: `Access: Read-only`
-- **Repository Permissions**:
-  - **Contents** (or **Code**): `Access: Read and write` (required by the GitHub API to return `starred_at` timestamps — this is an API quirk, not needed for writing the SVG)
-  - **Metadata**: `Access: Read-only`
-
-Store this token in your repository secrets as `PAT_TOKEN` and pass it in your workflow:
-
-```yaml
-with:
-  github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
-```
-
-#### 3. Personal Access Token (Classic)
-
-If using a Classic PAT:
-
-- **Public Repositories**: Check **`public_repo`** scope.
-- **Private Repositories**: Check **`repo`** scope.
-- **Organization SSO**: If your repository is owned by a SAML SSO-enabled organization, click **Configure SSO** next to the token in Developer Settings.
-
----
-
-## Usage Examples
-
-### 1. Single Repository Setup (Current Repo)
-
-Place this workflow in `.github/workflows/generate-star-history.yml`:
+## Quick Start
 
 ```yaml
 name: Generate Star History
 
 on:
   schedule:
-    - cron: '0 0 * * 0' # Every Sunday at midnight
+    - cron: "0 0 * * 0" # Weekly on Sunday
   workflow_dispatch:
 
 jobs:
@@ -119,95 +52,59 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Generate Star History
         uses: kitswas/generate-star-history@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          output-path: 'assets/star-history.svg'
-          theme: 'auto'
+          output-path: "assets/star-history.svg"
 
-      - name: Commit and Push
+      - name: Commit Chart
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/star-history.svg
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: update star history chart [skip ci]"
-            git push
-          fi
+          git diff --staged --quiet || git commit -m "chore: update star history chart [skip ci]" && git push
 ```
 
 ---
 
-### 2. Multi-Repository Comparison on a Single Chart
+## Action Inputs & Outputs
 
-Compare multiple repositories on a single chart with a color-coded legend:
+### Inputs
 
-```yaml
-name: Generate Comparison Star History
+| Input          | Description                                                      | Required | Default                    |
+| :------------- | :--------------------------------------------------------------- | :------: | :------------------------- |
+| `github-token` | GitHub access token (`GITHUB_TOKEN` or PAT)                      | **Yes**  | `${{ github.token }}`      |
+| `repository`   | Target repo or comma-separated list (`owner/repo1, owner/repo2`) |    No    | `${{ github.repository }}` |
+| `output-path`  | Output path for the SVG chart                                    |    No    | `assets/star-history.svg`  |
+| `theme`        | Theme (`auto`, `dark`, `light`)                                  |    No    | `auto`                     |
 
-on:
-  schedule:
-    - cron: '0 0 * * 0'
-  workflow_dispatch:
+### Outputs
 
-jobs:
-  generate-comparison:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Generate Comparison Chart
-        uses: kitswas/generate-star-history@v1
-        with:
-          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
-          repository: 'kitswas/VirtualGamePad-PC, kitswas/VirtualGamePad-Mobile'
-          output-path: 'assets/star-history-comparison.svg'
-          theme: 'auto'
-
-      - name: Commit and Push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/*.svg
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: update comparison star history chart [skip ci]"
-            git push
-          fi
-```
+| Output     | Description                               |
+| :--------- | :---------------------------------------- |
+| `svg-path` | Workspace path to the generated SVG chart |
 
 ---
 
-## Local Development & Testing
+## Authentication & PAT Setup
 
-You can test chart generation locally without running a GitHub Action:
+- **Single Repository (Current Repo)**: Standard `${{ secrets.GITHUB_TOKEN }}` works automatically with `permissions: { contents: write }`.
+- **Multi-Repository Comparison**: Use a Fine-Grained Personal Access Token (PAT) with `Starring: Read-only` and `Contents: Read and write` access across target repos.
+
+---
+
+## Local Development
 
 ```bash
-# Offline single-repo mock mode
+# Offline test
 pnpm test:local
 
-# Offline multi-series mock mode
-MOCK=true REPO="mock/repo-200, mock/repo-large" pnpm test:local
+# Run test suite
+pnpm test
 
-# Live mode
-GITHUB_TOKEN="your_pat_token" REPO="facebook/react, vuejs/core" THEME="dark" OUTPUT="assets/comparison.svg" pnpm test:local
-```
-
-### Development Commands
-
-```bash
-pnpm typecheck # TypeScript compilation check
-pnpm lint      # Lint codebase
-pnpm test      # Run Vitest unit tests
-pnpm test:fuzz # Run property-based fuzz tests
-pnpm depcruise # Verify circular dependency constraints
-pnpm build     # Build production bundle using @vercel/ncc
+# Build bundle
+pnpm build
 ```
