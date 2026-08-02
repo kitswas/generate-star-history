@@ -19,12 +19,12 @@ A lightweight, standalone TypeScript GitHub Action that generates responsive, ma
 
 ### Inputs
 
-| Input          | Description                                                            | Required | Default                    |
-| :------------- | :--------------------------------------------------------------------- | :------: | :------------------------- |
-| `github-token` | GitHub access token (`GITHUB_TOKEN` or `PAT`)                          | **Yes**  | `${{ github.token }}`      |
-| `repository`   | Target repository or comma-separated list (`owner/repo1, owner/repo2`) |    No    | `${{ github.repository }}` |
-| `output-path`  | Output path for the generated `.svg` file                              |    No    | `assets/star-history.svg`  |
-| `theme`        | Chart theme (`auto`, `dark`, `light`)                                  |    No    | `auto`                     |
+| Input          | Description                                                                                                                                                                                                                      | Required | Default                    |
+| :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------: | :------------------------- |
+| `github-token` | GitHub access token (`GITHUB_TOKEN` or `PAT`). **Required** for all API calls per [GitHub API Access Restrictions](https://github.blog/changelog/2026-06-30-upcoming-access-restrictions-to-public-api-endpoints-and-ui-views/). | **Yes**  | `${{ github.token }}`      |
+| `repository`   | Target repository or comma-separated list (`owner/repo1, owner/repo2`)                                                                                                                                                           |    No    | `${{ github.repository }}` |
+| `output-path`  | Workspace-relative output path for the generated `.svg` file                                                                                                                                                                     |    No    | `assets/star-history.svg`  |
+| `theme`        | Chart theme (`auto`, `dark`, `light`)                                                                                                                                                                                            |    No    | `auto`                     |
 
 ### Outputs
 
@@ -36,7 +36,7 @@ A lightweight, standalone TypeScript GitHub Action that generates responsive, ma
 
 ## GitHub REST APIs & Authentication Guide
 
-This action calls the following GitHub REST API endpoints:
+This action calls GitHub REST API endpoints. An authenticated token (`github-token`) is **required** for all API calls following the [GitHub API Access Restrictions](https://github.blog/changelog/2026-06-30-upcoming-access-restrictions-to-public-api-endpoints-and-ui-views/).
 
 ### Endpoints Used
 
@@ -69,7 +69,7 @@ If targeting **other/external repositories** (e.g. `repository: 'kitswas/Virtual
 - **User Permissions**:
   - **Starring**: `Access: Read-only`
 - **Repository Permissions**:
-  - **Contents** (or **Code**): `Access: Read and write`
+  - **Contents** (or **Code**): `Access: Read and write` (required by the GitHub API to return `starred_at` timestamps — this is an API quirk, not needed for writing the SVG)
   - **Metadata**: `Access: Read-only`
 
 Store this token in your repository secrets as `PAT_TOKEN` and pass it in your workflow:

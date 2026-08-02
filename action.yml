@@ -1,25 +1,28 @@
 name: 'Generate Star History'
-description: 'Generates a responsive SVG star history chart for your repository'
+description: 'Generates an animated, responsive SVG star history chart for single or multi-repository comparisons with zero external dependencies.'
 inputs:
   github-token:
-    description: 'GitHub token for fetching star history'
+    description: 'GitHub token for fetching star history (GITHUB_TOKEN for single repo, or a Personal Access Token (PAT) for multi-repo / cross-repository generation). Required due to API rate limit and authentication enforcement (see https://github.blog/changelog/2026-06-30-upcoming-access-restrictions-to-public-api-endpoints-and-ui-views/).'
     required: true
     default: ${{ github.token }}
   repository:
-    description: 'Target repository in owner/repo format'
+    description: 'Target repository ("owner/repo") or comma-separated list for multi-repo comparison (e.g. "owner/repo1, owner/repo2"). Defaults to current repository.'
     required: false
     default: ${{ github.repository }}
   output-path:
-    description: 'Output path for the generated SVG chart'
+    description: 'Workspace-relative file path where the generated SVG chart will be saved.'
     required: false
     default: 'assets/star-history.svg'
   theme:
-    description: 'Chart theme (dark, light, auto)'
+    description: 'Chart styling mode: "auto" (CSS @media prefers-color-scheme reactive), "dark", or "light".'
     required: false
     default: 'auto'
 outputs:
   svg-path:
-    description: 'The path where the SVG was written'
+    description: 'Workspace-relative path of the generated SVG chart (mirrors output-path input). Use with git add or actions/upload-artifact.'
 runs:
   using: 'node24'
   main: 'dist/index.js'
+branding:
+  icon: 'star'
+  color: 'yellow'
