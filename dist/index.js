@@ -36956,6 +36956,53 @@ function isValidIsoDate(dateStr) {
     }
 }
 /**
+ * Formats a numeric count into a human-readable Y-axis tick label using 'k' or 'M' suffixes.
+ */
+function formatYTickLabel(val) {
+    if (val >= 1_000_000) {
+        const formatted = (val / 1_000_000).toFixed(1);
+        return (formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted) + 'M';
+    }
+    if (val >= 1_000) {
+        const formatted = (val / 1_000).toFixed(1);
+        return (formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted) + 'k';
+    }
+    return String(Math.round(val));
+}
+/**
+ * Calculates neat power-of-ten Y-axis ticks and upper bound for a given peak star count.
+ */
+function calculateYAxisTicks(maxRawCount) {
+    const safeCount = Math.max(1, Math.ceil(maxRawCount));
+    if (safeCount <= 10) {
+        return { yMax: 10, ticks: Array.from({ length: 11 }, (_, i) => i) };
+    }
+    const exp = Math.floor(Math.log10(safeCount));
+    const baseStep = Math.pow(10, exp - 1);
+    const candidates = [1, 2, 5, 10];
+    let selectedStep = baseStep * 10;
+    let yMax = selectedStep;
+    for (const mult of candidates) {
+        const step = baseStep * mult;
+        let candidateYMax = Math.ceil(safeCount / step) * step;
+        // If safeCount is an exact multiple of step, add one step so graph ceiling doesn't clip top line
+        if (candidateYMax === safeCount && safeCount % step === 0 && safeCount > 10) {
+            candidateYMax = Math.ceil((safeCount + 1) / step) * step;
+        }
+        const numTicks = Math.round(candidateYMax / step);
+        if (numTicks >= 4 && numTicks <= 10) {
+            selectedStep = step;
+            yMax = candidateYMax;
+            break;
+        }
+    }
+    const ticks = [];
+    for (let val = 0; val <= yMax; val += selectedStep) {
+        ticks.push(Math.round(val));
+    }
+    return { yMax, ticks };
+}
+/**
  * Transforms sparse `RawStarPoint[]` records into a smooth daily cumulative `TimeSeriesPoint[]` time series.
  *
  * - Filters out invalid or out-of-range ISO dates (year 2000–2100).
@@ -37085,7 +37132,8 @@ function renderChart(inputData, options) {
     }
     // Calculate global max count and time bounds across all series
     const allCounts = normalizedSeries.flatMap((s) => s.data.map((d) => d.count));
-    const maxCount = Math.max(...allCounts, 10);
+    const rawMaxCount = Math.max(...allCounts, 1);
+    const { yMax, ticks: yTicks } = calculateYAxisTicks(rawMaxCount);
     const allStartTimes = normalizedSeries.map((s) => new Date(s.data[0].date).getTime());
     const allEndTimes = normalizedSeries.map((s) => new Date(s.data[s.data.length - 1].date).getTime());
     const globalStartTime = Math.min(...allStartTimes);
@@ -37099,7 +37147,7 @@ function renderChart(inputData, options) {
         return padding.left + ((t - globalStartTime) / timeSpan) * innerWidth;
     };
     const scaleY = (count) => {
-        return padding.top + innerHeight - (count / maxCount) * innerHeight;
+        return padding.top + innerHeight - (count / yMax) * innerHeight;
     };
     // Colors based on theme
     let bg = '#ffffff';
@@ -37200,15 +37248,14 @@ function renderChart(inputData, options) {
   `;
     // Grid and Y labels
     let yGrids = '';
-    const ySteps = 5;
-    for (let i = 0; i <= ySteps; i++) {
-        const val = (maxCount / ySteps) * i;
+    yTicks.forEach((val) => {
         const yPos = scaleY(val);
+        const label = formatYTickLabel(val);
         yGrids += `
       <line x1="${padding.left}" y1="${yPos}" x2="${width - padding.right}" y2="${yPos}" class="grid" />
-      <text x="${padding.left - 10}" y="${yPos + 4}" class="text" text-anchor="end">${Math.round(val)}</text>
+      <text x="${padding.left - 10}" y="${yPos + 4}" class="text" text-anchor="end">${label}</text>
     `;
-    }
+    });
     // X labels
     let xLabels = '';
     xLabels += `<text x="${padding.left}" y="${height - 20}" class="text" text-anchor="middle">${globalStartDateStr}</text>`;

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { processStargazers, renderSvgChart } from './chart.js';
+import {
+  processStargazers,
+  renderSvgChart,
+  calculateYAxisTicks,
+  formatYTickLabel
+} from './chart.js';
 
 describe('ChartRenderer', () => {
   it('correctly sorts and backfills stargazer time series', () => {
@@ -56,5 +61,34 @@ describe('ChartRenderer', () => {
   it('handles empty input gracefully', () => {
     const svg = renderSvgChart([], { theme: 'light' });
     expect(svg).toContain('No data available');
+  });
+
+  describe('Y-axis scale & label formatting', () => {
+    it('calculates neat power of 10 ticks', () => {
+      expect(calculateYAxisTicks(7)).toEqual({
+        yMax: 10,
+        ticks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+      });
+
+      expect(calculateYAxisTicks(45)).toEqual({
+        yMax: 50,
+        ticks: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+      });
+
+      expect(calculateYAxisTicks(350)).toEqual({
+        yMax: 400,
+        ticks: [0, 50, 100, 150, 200, 250, 300, 350, 400]
+      });
+    });
+
+    it('formats tick labels using k and M modifiers', () => {
+      expect(formatYTickLabel(0)).toBe('0');
+      expect(formatYTickLabel(500)).toBe('500');
+      expect(formatYTickLabel(1000)).toBe('1k');
+      expect(formatYTickLabel(2500)).toBe('2.5k');
+      expect(formatYTickLabel(150000)).toBe('150k');
+      expect(formatYTickLabel(1000000)).toBe('1M');
+      expect(formatYTickLabel(2500000)).toBe('2.5M');
+    });
   });
 });
