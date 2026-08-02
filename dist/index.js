@@ -36942,11 +36942,13 @@ const DEFAULT_PALETTE = [
 function isValidIsoDate(dateStr) {
     if (typeof dateStr !== 'string' || dateStr.trim().length === 0)
         return false;
-    const t = new Date(dateStr).getTime();
+    const d = new Date(dateStr);
+    const t = d.getTime();
     if (isNaN(t))
         return false;
     try {
-        const year = new Date(t).getUTCFullYear();
+        d.toISOString();
+        const year = d.getUTCFullYear();
         return year >= 2000 && year <= 2100;
     }
     catch {
@@ -37051,7 +37053,10 @@ function renderChart(inputData, options) {
         let data = (s.data ?? [])
             .filter((d) => d && isValidIsoDate(d.date))
             .map((d) => ({
-            date: d.date.includes('T') ? d.date.split('T')[0] : d.date,
+            // Use toISOString() on the parsed Date to produce a canonical YYYY-MM-DD key.
+            // Splitting the raw input string (e.g. "T 1".split('T')[0] === "") produces
+            // empty strings for exotic-but-valid date strings, breaking downstream lookups.
+            date: new Date(d.date).toISOString().split('T')[0],
             count: Number.isFinite(d.count) ? Math.max(0, Math.floor(d.count)) : 0
         }));
         if (data.length === 1) {
