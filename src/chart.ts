@@ -67,6 +67,54 @@ export function formatYTickLabel(val: number): string {
 }
 
 /**
+ * Computes SVG path string with monotone cubic Bezier curves ('C') to prevent curve overshooting.
+ * Uses Fritsch-Carlson monotone cubic spline interpolation algorithm.
+ */
+export function generateMonotoneCubicPath(points: { x: number; y: number }[]): string {
+  if (points.length < 1) return '';
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  if (points.length === 2) {
+    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+  }
+
+  const n = points.length;
+  const dx: number[] = [];
+  const dy: number[] = [];
+  const ms: number[] = [];
+
+  for (let i = 0; i < n - 1; i++) {
+    const delX = points[i + 1].x - points[i].x;
+    const delY = points[i + 1].y - points[i].y;
+    dx.push(delX);
+    dy.push(delY);
+    ms.push(delX === 0 ? 0 : delY / delX);
+  }
+
+  const c1s: number[] = [ms[0]];
+  for (let i = 0; i < n - 2; i++) {
+    const m = ms[i];
+    const mNext = ms[i + 1];
+    if (m * mNext <= 0) {
+      c1s.push(0);
+    } else {
+      const common = dx[i] + dx[i + 1];
+      c1s.push((3 * common) / ((common + dx[i + 1]) / m + (common + dx[i]) / mNext));
+    }
+  }
+  c1s.push(ms[ms.length - 1]);
+
+  let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const d = dx[i];
+    path += ` C ${(p1.x + d / 3).toFixed(2)} ${(p1.y + (c1s[i] * d) / 3).toFixed(2)}, ${(p2.x - d / 3).toFixed(2)} ${(p2.y - (c1s[i + 1] * d) / 3).toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+
+  return path;
+}
+
+/**
  * Calculates neat power-of-ten Y-axis ticks and upper bound for a given peak star count.
  */
 export function calculateYAxisTicks(maxRawCount: number): { yMax: number; ticks: number[] } {
@@ -312,25 +360,38 @@ export function renderChart(
   }
 
   normalizedSeries.forEach((s, sIdx) => {
-    let pathD = `M ${scaleX(s.data[0].date)} ${scaleY(s.data[0].count)}`;
-    let dotsMarkup = '';
+    const points = s.data.map((d) => ({
+      x: scaleX(d.date),
+      y: scaleY(d.count)
+    }));
 
-    for (let i = 0; i < s.data.length; i++) {
-      const cx = scaleX(s.data[i].date);
-      const cy = scaleY(s.data[i].count);
-      if (i > 0) {
-        pathD += ` L ${cx} ${cy}`;
+    const avgSpacing = points.length > 1 ? innerWidth / (points.length - 1) : innerWidth;
+    const isDense = avgSpacing < 15;
+
+    let pathD = '';
+    if (isDense) {
+      pathD = generateMonotoneCubicPath(points);
+    } else {
+      pathD = `M ${points[0].x} ${points[0].y}`;
+      for (let i = 1; i < points.length; i++) {
+        pathD += ` L ${points[i].x} ${points[i].y}`;
       }
-      dotsMarkup += `<circle cx="${cx}" cy="${cy}" r="3" fill="${s.color}" class="dot" />`;
     }
 
-    const areaD = `${pathD} L ${scaleX(s.data[s.data.length - 1].date)} ${scaleY(0)} L ${scaleX(s.data[0].date)} ${scaleY(0)} Z`;
+    let dotsMarkup = '';
+    if (!isDense) {
+      for (let i = 0; i < points.length; i++) {
+        dotsMarkup += `<circle cx="${points[i].x}" cy="${points[i].y}" r="3" fill="${s.color}" class="dot" />`;
+      }
+    }
+
+    const areaD = `${pathD} L ${points[points.length - 1].x} ${scaleY(0)} L ${points[0].x} ${scaleY(0)} Z`;
 
     seriesMarkup += `
       <g class="series-group series-${sIdx}">
         <path d="${areaD}" fill="${s.color}" fill-opacity="0.08" class="area" />
         <path d="${pathD}" stroke="${s.color}" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="line line-anim" />
-        <g class="dots">${dotsMarkup}</g>
+        ${dotsMarkup ? `<g class="dots">${dotsMarkup}</g>` : ''}
       </g>
     `;
   });

@@ -3,7 +3,8 @@ import {
   processStargazers,
   renderSvgChart,
   calculateYAxisTicks,
-  formatYTickLabel
+  formatYTickLabel,
+  generateMonotoneCubicPath
 } from './chart.js';
 
 describe('ChartRenderer', () => {
@@ -89,6 +90,42 @@ describe('ChartRenderer', () => {
       expect(formatYTickLabel(150000)).toBe('150k');
       expect(formatYTickLabel(1000000)).toBe('1M');
       expect(formatYTickLabel(2500000)).toBe('2.5M');
+    });
+  });
+
+  describe('Adaptive Density & Monotone Cubic Curve Smoothing', () => {
+    it('generates a valid monotone cubic Bezier path for points', () => {
+      const points = [
+        { x: 0, y: 100 },
+        { x: 10, y: 80 },
+        { x: 20, y: 50 },
+        { x: 30, y: 10 }
+      ];
+      const path = generateMonotoneCubicPath(points);
+      expect(path).toContain('M 0.00 100.00');
+      expect(path).toContain('C');
+    });
+
+    it('renders sparse series with linear paths and visible dots', () => {
+      const sparseData = [
+        { date: '2023-01-01', count: 10 },
+        { date: '2023-01-02', count: 20 }
+      ];
+      const svg = renderSvgChart(sparseData);
+      expect(svg).toContain('<circle');
+      expect(svg).toContain('<g class="dots">');
+    });
+
+    it('renders dense series with monotone cubic paths and suppresses dots', () => {
+      // 100 points across innerWidth (700px) -> avgSpacing ~7px < 15px (dense)
+      const denseData = Array.from({ length: 100 }, (_, i) => {
+        const d = new Date(2023, 0, 1 + i).toISOString().split('T')[0];
+        return { date: d, count: (i + 1) * 10 };
+      });
+      const svg = renderSvgChart(denseData);
+      expect(svg).not.toContain('<g class="dots">');
+      expect(svg).not.toContain('<circle');
+      expect(svg).toContain(' C ');
     });
   });
 });

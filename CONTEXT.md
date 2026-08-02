@@ -26,6 +26,14 @@ A visual component rendered at the top of a multi-repository chart containing co
 
 SVG chart markup enhanced with CSS keyframe stroke-dasharray animations (`@keyframes draw`) for progressive 1.2s ease-out line rendering and CSS transition hover effects on data point `<circle>` elements.
 
+### DensityThreshold
+
+A horizontal distance boundary ($< 15\text{px}$ average spacing between consecutive data points on the SVG canvas) that determines when a `RepositorySeries` is dense. When dense, static `<circle>` data dots are suppressed to eliminate visual clutter, and line pathing switches to monotone cubic spline curve smoothing.
+
+### MonotoneCubicSpline
+
+Fritsch-Carlson monotone cubic spline interpolation algorithm implemented in `generateMonotoneCubicPath` (`src/chart.ts`). Computes cubic Bezier `C` path instructions for dense series that preserve monotonic trends without overshooting or undershooting data bounds.
+
 ### StargazerFetcher
 
 The deep module in `src/fetcher.ts`. Exposes two seams:
