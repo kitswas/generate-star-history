@@ -29275,8 +29275,7 @@ var __webpack_exports__ = {};
 __nccwpck_require__.d(__webpack_exports__, {
   Fw: () => (/* reexport */ fetchStarHistory),
   _q: () => (/* reexport */ processStargazers),
-  xt: () => (/* reexport */ renderChart),
-  ZN: () => (/* reexport */ renderSvgChart)
+  xt: () => (/* reexport */ renderChart)
 });
 
 ;// CONCATENATED MODULE: external "os"
@@ -36931,16 +36930,16 @@ const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.ur
 const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
 ;// CONCATENATED MODULE: ./dist-tsc/chart.js
 const DEFAULT_PALETTE = [
-    '#0366d6', // Blue
-    '#28a745', // Green
-    '#d73a49', // Red
-    '#6f42c1', // Purple
-    '#e36209', // Orange
-    '#005cc5', // Dark Blue
-    '#22863a' // Dark Green
+    "#0366d6", // Blue
+    "#28a745", // Green
+    "#d73a49", // Red
+    "#6f42c1", // Purple
+    "#e36209", // Orange
+    "#005cc5", // Dark Blue
+    "#22863a", // Dark Green
 ];
 function isValidIsoDate(dateStr) {
-    if (typeof dateStr !== 'string' || dateStr.trim().length === 0)
+    if (typeof dateStr !== "string" || dateStr.trim().length === 0)
         return false;
     const d = new Date(dateStr);
     const t = d.getTime();
@@ -36961,11 +36960,11 @@ function isValidIsoDate(dateStr) {
 function formatYTickLabel(val) {
     if (val >= 1_000_000) {
         const formatted = (val / 1_000_000).toFixed(1);
-        return (formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted) + 'M';
+        return ((formatted.endsWith(".0") ? formatted.slice(0, -2) : formatted) + "M");
     }
     if (val >= 1_000) {
         const formatted = (val / 1_000).toFixed(1);
-        return (formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted) + 'k';
+        return ((formatted.endsWith(".0") ? formatted.slice(0, -2) : formatted) + "k");
     }
     return String(Math.round(val));
 }
@@ -36975,7 +36974,7 @@ function formatYTickLabel(val) {
  */
 function generateMonotoneCubicPath(points) {
     if (points.length < 1)
-        return '';
+        return "";
     if (points.length === 1)
         return `M ${points[0].x} ${points[0].y}`;
     if (points.length === 2) {
@@ -37063,7 +37062,9 @@ function calculateYAxisTicks(maxRawCount) {
         const step = baseStep * mult;
         let candidateYMax = Math.ceil(safeCount / step) * step;
         // If safeCount is an exact multiple of step, add one step so graph ceiling doesn't clip top line
-        if (candidateYMax === safeCount && safeCount % step === 0 && safeCount > 10) {
+        if (candidateYMax === safeCount &&
+            safeCount % step === 0 &&
+            safeCount > 10) {
             candidateYMax = Math.ceil((safeCount + 1) / step) * step;
         }
         const numTicks = Math.round(candidateYMax / step);
@@ -37096,7 +37097,7 @@ function processStargazers(stars) {
         .filter((s) => s && isValidIsoDate(s.date))
         .map((s) => ({
         date: s.date,
-        count: Number.isFinite(s.count) ? Math.max(0, Math.floor(s.count)) : 0
+        count: Number.isFinite(s.count) ? Math.max(0, Math.floor(s.count)) : 0,
     }));
     if (validStars.length === 0)
         return [];
@@ -37115,7 +37116,7 @@ function processStargazers(stars) {
     for (const s of validStars) {
         try {
             const d = new Date(s.date);
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = d.toISOString().split("T")[0];
             starMap.set(dateStr, Math.max(starMap.get(dateStr) ?? 0, s.count));
         }
         catch {
@@ -37126,7 +37127,7 @@ function processStargazers(stars) {
     const currentDate = new Date(startDate);
     for (let day = 0; day <= diffDays; day++) {
         try {
-            const dateStr = currentDate.toISOString().split('T')[0];
+            const dateStr = currentDate.toISOString().split("T")[0];
             if (starMap.has(dateStr)) {
                 currentCount = starMap.get(dateStr);
             }
@@ -37161,14 +37162,21 @@ function renderChart(inputData, options) {
     // Convert legacy single-series input to RepositorySeries[]
     let seriesList = [];
     if (Array.isArray(inputData) && inputData.length > 0) {
-        if ('data' in inputData[0]) {
+        if ("data" in inputData[0]) {
             seriesList = inputData;
         }
         else {
-            seriesList = [{ name: 'Stargazers', data: inputData }];
+            seriesList = [
+                { name: "Stargazers", data: inputData },
+            ];
         }
     }
-    const padding = { top: seriesList.length > 1 ? 60 : 40, right: 40, bottom: 60, left: 60 };
+    const padding = {
+        top: seriesList.length > 1 ? 60 : 40,
+        right: 40,
+        bottom: 60,
+        left: 60,
+    };
     const innerWidth = width - padding.left - padding.right;
     const innerHeight = height - padding.top - padding.bottom;
     // Normalize series data
@@ -37180,14 +37188,16 @@ function renderChart(inputData, options) {
             // Use toISOString() on the parsed Date to produce a canonical YYYY-MM-DD key.
             // Splitting the raw input string (e.g. "T 1".split('T')[0] === "") produces
             // empty strings for exotic-but-valid date strings, breaking downstream lookups.
-            date: new Date(d.date).toISOString().split('T')[0],
-            count: Number.isFinite(d.count) ? Math.max(0, Math.floor(d.count)) : 0
+            date: new Date(d.date).toISOString().split("T")[0],
+            count: Number.isFinite(d.count)
+                ? Math.max(0, Math.floor(d.count))
+                : 0,
         }));
         if (data.length === 1) {
             try {
                 const prevDate = new Date(data[0].date);
                 prevDate.setUTCDate(prevDate.getUTCDate() - 1);
-                const prevDateStr = prevDate.toISOString().split('T')[0];
+                const prevDateStr = prevDate.toISOString().split("T")[0];
                 data = [{ date: prevDateStr, count: 0 }, ...data];
             }
             catch {
@@ -37197,7 +37207,7 @@ function renderChart(inputData, options) {
         return {
             name: s.name || `Series ${idx + 1}`,
             color: s.color || DEFAULT_PALETTE[idx % DEFAULT_PALETTE.length],
-            data
+            data,
         };
     })
         .filter((s) => s.data.length > 0);
@@ -37216,8 +37226,10 @@ function renderChart(inputData, options) {
     const globalStartTime = Math.min(...allStartTimes);
     const globalEndTime = Math.max(...allEndTimes);
     const timeSpan = Math.max(globalEndTime - globalStartTime, 86400000);
-    const globalStartDateStr = new Date(globalStartTime).toISOString().split('T')[0];
-    const globalEndDateStr = new Date(globalEndTime).toISOString().split('T')[0];
+    const globalStartDateStr = new Date(globalStartTime)
+        .toISOString()
+        .split("T")[0];
+    const globalEndDateStr = new Date(globalEndTime).toISOString().split("T")[0];
     // Scaling helpers
     const scaleX = (dateStr) => {
         const t = new Date(dateStr).getTime();
@@ -37227,18 +37239,18 @@ function renderChart(inputData, options) {
         return padding.top + innerHeight - (count / yMax) * innerHeight;
     };
     // Colors based on theme
-    let bg = '#ffffff';
-    let textPrimary = '#333333';
-    let gridLine = '#e1e4e8';
-    const theme = options?.theme ?? 'auto';
-    if (theme === 'dark') {
-        bg = '#0d1117';
-        textPrimary = '#c9d1d9';
-        gridLine = '#30363d';
+    let bg = "#ffffff";
+    let textPrimary = "#333333";
+    let gridLine = "#e1e4e8";
+    const theme = options?.theme ?? "auto";
+    if (theme === "dark") {
+        bg = "#0d1117";
+        textPrimary = "#c9d1d9";
+        gridLine = "#30363d";
     }
     // Generate paths, area fill, and dots per series
-    let seriesMarkup = '';
-    let legendMarkup = '';
+    let seriesMarkup = "";
+    let legendMarkup = "";
     if (normalizedSeries.length > 1) {
         let legendX = padding.left;
         const legendY = 25;
@@ -37256,11 +37268,11 @@ function renderChart(inputData, options) {
         const simplifiedData = simplifySeriesData(s.data);
         const points = simplifiedData.map((d) => ({
             x: scaleX(d.date),
-            y: scaleY(d.count)
+            y: scaleY(d.count),
         }));
         const avgSpacing = points.length > 1 ? innerWidth / (points.length - 1) : innerWidth;
         const isDense = avgSpacing < 15;
-        let pathD = '';
+        let pathD = "";
         if (isDense) {
             pathD = generateMonotoneCubicPath(points);
         }
@@ -37270,7 +37282,7 @@ function renderChart(inputData, options) {
                 pathD += ` L ${points[i].x} ${points[i].y}`;
             }
         }
-        let dotsMarkup = '';
+        let dotsMarkup = "";
         if (!isDense) {
             for (let i = 0; i < points.length; i++) {
                 dotsMarkup += `<circle cx="${points[i].x}" cy="${points[i].y}" r="3" fill="${s.color}" class="dot" />`;
@@ -37281,12 +37293,12 @@ function renderChart(inputData, options) {
       <g class="series-group series-${sIdx}">
         <path d="${areaD}" fill="${s.color}" fill-opacity="0.08" class="area" />
         <path d="${pathD}" stroke="${s.color}" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="line line-anim" />
-        ${dotsMarkup ? `<g class="dots">${dotsMarkup}</g>` : ''}
+        ${dotsMarkup ? `<g class="dots">${dotsMarkup}</g>` : ""}
       </g>
     `;
     });
     // Dynamic CSS styling & keyframe animations
-    const styleStr = theme === 'auto'
+    const styleStr = theme === "auto"
         ? `
     <style>
       .bg { fill: #ffffff; }
@@ -37337,7 +37349,7 @@ function renderChart(inputData, options) {
     </style>
   `;
     // Grid and Y labels
-    let yGrids = '';
+    let yGrids = "";
     yTicks.forEach((val) => {
         const yPos = scaleY(val);
         const label = formatYTickLabel(val);
@@ -37347,24 +37359,19 @@ function renderChart(inputData, options) {
     `;
     });
     // X labels
-    let xLabels = '';
+    let xLabels = "";
     xLabels += `<text x="${padding.left}" y="${height - 20}" class="text" text-anchor="middle">${globalStartDateStr}</text>`;
     xLabels += `<text x="${width - padding.right}" y="${height - 20}" class="text" text-anchor="middle">${globalEndDateStr}</text>`;
     return `<?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="auto">
   ${styleStr}
   <rect width="100%" height="100%" class="bg" />
-  ${legendMarkup ? `<g class="legend">${legendMarkup}</g>` : ''}
+  ${legendMarkup ? `<g class="legend">${legendMarkup}</g>` : ""}
   <g class="grids">${yGrids}</g>
   <g class="labels">${xLabels}</g>
   ${seriesMarkup}
 </svg>`;
 }
-/**
- * Backwards-compatibility alias for `renderChart`.
- * @deprecated Use `renderChart` directly.
- */
-const renderSvgChart = renderChart;
 
 ;// CONCATENATED MODULE: ./dist-tsc/fetcher.js
 
@@ -37425,8 +37432,8 @@ async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
                     per_page: 100,
                     page,
                     headers: {
-                        accept: 'application/vnd.github.star+json'
-                    }
+                        accept: "application/vnd.github.star+json",
+                    },
                 });
                 stargazers = data;
             }
@@ -37440,8 +37447,8 @@ async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
                     per_page: 100,
                     page,
                     headers: {
-                        accept: 'application/vnd.github+json'
-                    }
+                        accept: "application/vnd.github+json",
+                    },
                 });
                 stargazers = data;
             }
@@ -37451,7 +37458,7 @@ async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
                 const globalIndex = (page - 1) * 100 + i + 1;
                 rawData.push({
                     date: dateStr,
-                    count: globalIndex
+                    count: globalIndex,
                 });
             }
         }
@@ -37459,7 +37466,7 @@ async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
     catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         warning(`Encountered an error while fetching stargazers for ${owner}/${repo}. Will render partial data. Error: ${errMsg}`);
-        if (errMsg.includes('Resource not accessible')) {
+        if (errMsg.includes("Resource not accessible")) {
             error(`🔑 PERMISSION TROUBLESHOOTING FOR ${owner}/${repo}:\n` +
                 `1. Fine-grained PAT: Go to 'User permissions' -> Set 'Starring' to 'Read-only'.\n` +
                 `2. Repository access: Ensure 'Repository access' includes '${owner}/${repo}' with 'Metadata: Read-only' or 'Contents: Read and write'.\n` +
@@ -37488,21 +37495,21 @@ async function fetchSampledStargazers(owner, repo, octokit, totalStars) {
  * @param defaultRepo     - Fallback repo name when `targetRepoInput` is unset.
  * @returns               - Array of `RepositorySeries` ready to pass to `renderChart`.
  */
-async function fetchStarHistory(targetRepoInput, octokit, defaultOwner = '', defaultRepo = '') {
+async function fetchStarHistory(targetRepoInput, octokit, defaultOwner = "", defaultRepo = "") {
     const rawRepoList = targetRepoInput
         ? targetRepoInput
-            .split(',')
+            .split(",")
             .map((r) => r.trim())
             .filter(Boolean)
-        : [defaultOwner && defaultRepo ? `${defaultOwner}/${defaultRepo}` : ''];
+        : [defaultOwner && defaultRepo ? `${defaultOwner}/${defaultRepo}` : ""];
     const allSeries = [];
     for (const repoSlug of rawRepoList) {
         if (!repoSlug)
             continue;
         let owner = defaultOwner;
         let repo = defaultRepo;
-        if (repoSlug.includes('/')) {
-            const parts = repoSlug.split('/');
+        if (repoSlug.includes("/")) {
+            const parts = repoSlug.split("/");
             owner = parts[0].trim();
             repo = parts[1].trim();
         }
@@ -37514,19 +37521,19 @@ async function fetchStarHistory(targetRepoInput, octokit, defaultOwner = '', def
                 info(`Repository ${owner}/${repo} has 0 stars.`);
                 allSeries.push({
                     name: `${owner}/${repo}`,
-                    data: []
+                    data: [],
                 });
                 continue;
             }
             const rawData = await fetchSampledStargazers(owner, repo, octokit, totalStars);
             rawData.push({
                 date: new Date().toISOString(),
-                count: totalStars
+                count: totalStars,
             });
             const timeSeries = processStargazers(rawData);
             allSeries.push({
                 name: `${owner}/${repo}`,
-                data: timeSeries
+                data: timeSeries,
             });
         }
         catch (err) {
@@ -37546,7 +37553,6 @@ async function fetchStarHistory(targetRepoInput, octokit, defaultOwner = '', def
  * - `fetchStarHistory`  — deep `StargazerFetcher` entry point (see `src/fetcher.ts`)
  * - `renderChart`       — deep `ChartRenderer` entry point (see `src/chart.ts`)
  * - `processStargazers` — internal time-series interpolator (re-exported for fuzz tests)
- * - `renderSvgChart`    — deprecated alias for `renderChart`
  *
  * The `run()` function below is the sole side-effectful orchestrator; it is never
  * called during testing (`NODE_ENV !== 'test'`).
@@ -37565,17 +37571,18 @@ async function fetchStarHistory(targetRepoInput, octokit, defaultOwner = '', def
  */
 async function run() {
     try {
-        const token = getInput('github-token', { required: true });
-        const targetRepoInput = getInput('repository');
-        const outputPath = getInput('output-path') || 'assets/star-history.svg';
-        const themeInput = (getInput('theme') || 'auto');
+        const token = getInput("github-token", { required: true });
+        const targetRepoInput = getInput("repository");
+        const outputPath = getInput("output-path") || "assets/star-history.svg";
+        const themeInput = (getInput("theme") ||
+            "auto");
         const octokit = getOctokit(token);
         const context = github_context;
         const series = await fetchStarHistory(targetRepoInput, octokit, context.repo.owner, context.repo.repo);
         const svg = renderChart(series, { theme: themeInput });
         await promises_namespaceObject.mkdir(external_node_path_namespaceObject.dirname(outputPath), { recursive: true });
-        await promises_namespaceObject.writeFile(outputPath, svg, 'utf-8');
-        setOutput('svg-path', outputPath);
+        await promises_namespaceObject.writeFile(outputPath, svg, "utf-8");
+        setOutput("svg-path", outputPath);
         info(`Successfully generated star history chart at ${outputPath}`);
     }
     catch (error) {
@@ -37588,14 +37595,14 @@ async function run() {
     }
 }
 // Ensure the code runs only when executed directly, not during testing
-if (process.env.NODE_ENV !== 'test' && import.meta.url.endsWith(process.argv[1] ?? '')) {
+if (process.env.NODE_ENV !== "test" &&
+    import.meta.url.endsWith(process.argv[1] ?? "")) {
     run();
 }
 
 var __webpack_exports__fetchStarHistory = __webpack_exports__.Fw;
 var __webpack_exports__processStargazers = __webpack_exports__._q;
 var __webpack_exports__renderChart = __webpack_exports__.xt;
-var __webpack_exports__renderSvgChart = __webpack_exports__.ZN;
-export { __webpack_exports__fetchStarHistory as fetchStarHistory, __webpack_exports__processStargazers as processStargazers, __webpack_exports__renderChart as renderChart, __webpack_exports__renderSvgChart as renderSvgChart };
+export { __webpack_exports__fetchStarHistory as fetchStarHistory, __webpack_exports__processStargazers as processStargazers, __webpack_exports__renderChart as renderChart };
 
 //# sourceMappingURL=index.js.map

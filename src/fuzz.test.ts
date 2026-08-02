@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
-import { processStargazers, renderSvgChart } from "./chart.js";
+import { processStargazers, renderChart } from "./chart.js";
 
 describe("Large-Scale Fuzz Testing (fast-check)", () => {
 	it("fuzzes processStargazers with arbitrary date/count arrays", () => {
@@ -46,7 +46,7 @@ describe("Large-Scale Fuzz Testing (fast-check)", () => {
 		);
 	}, 15000);
 
-	it("fuzzes renderSvgChart with arbitrary TimeSeriesPoint inputs and themes", () => {
+	it("fuzzes renderChart with arbitrary TimeSeriesPoint inputs and themes", () => {
 		fc.assert(
 			fc.property(
 				fc.array(
@@ -68,7 +68,7 @@ describe("Large-Scale Fuzz Testing (fast-check)", () => {
 				fc.constantFrom("dark", "light", "auto"),
 				(dataPoints, theme) => {
 					expect(() => {
-						const svg = renderSvgChart(dataPoints, {
+						const svg = renderChart(dataPoints, {
 							theme: theme as "dark" | "light" | "auto",
 						});
 						expect(typeof svg).toBe("string");

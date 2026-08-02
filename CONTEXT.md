@@ -51,7 +51,6 @@ The deep module in `src/chart.ts`. Exposes two seams:
 
 - **External seam** — `renderChart(inputData, options?)`: accepts either a legacy `TimeSeriesPoint[]` or a `RepositorySeries[]` and returns a fully-formed, self-contained SVG string. Hides baseline prepending, date sanitization, color palette assignment, coordinate scaling, legend generation, and CSS animation embedding.
 - **Internal seam** — `processStargazers(stars)`: used only by `fetchStarHistory`; transforms sparse `RawStarPoint[]` arrays into smooth daily `TimeSeriesPoint[]` time series with linear backfill.
-- **Backwards-compatibility alias** — `renderSvgChart` re-exports `renderChart`.
 
 ### MockGitHubApi
 

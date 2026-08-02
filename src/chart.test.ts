@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
 	processStargazers,
-	renderSvgChart,
+	renderChart,
 	calculateYAxisTicks,
 	formatYTickLabel,
 	generateMonotoneCubicPath,
@@ -28,7 +28,7 @@ describe("ChartRenderer", () => {
 			{ date: "2023-01-02", count: 20 },
 		];
 
-		const svg = renderSvgChart(data, { theme: "auto" });
+		const svg = renderChart(data, { theme: "auto" });
 		expect(svg).toContain("<svg");
 		expect(svg).toContain(".line-anim");
 		expect(svg).toContain("@keyframes draw");
@@ -53,7 +53,7 @@ describe("ChartRenderer", () => {
 			},
 		];
 
-		const svg = renderSvgChart(multiSeries, { theme: "dark" });
+		const svg = renderChart(multiSeries, { theme: "dark" });
 		expect(svg).toContain('<g class="legend">');
 		expect(svg).toContain("Repo A");
 		expect(svg).toContain("Repo B");
@@ -61,7 +61,7 @@ describe("ChartRenderer", () => {
 	});
 
 	it("handles empty input gracefully", () => {
-		const svg = renderSvgChart([], { theme: "light" });
+		const svg = renderChart([], { theme: "light" });
 		expect(svg).toContain("No data available");
 	});
 
@@ -112,7 +112,7 @@ describe("ChartRenderer", () => {
 				{ date: "2023-01-01", count: 10 },
 				{ date: "2023-01-02", count: 20 },
 			];
-			const svg = renderSvgChart(sparseData);
+			const svg = renderChart(sparseData);
 			expect(svg).toContain("<circle");
 			expect(svg).toContain('<g class="dots">');
 		});
@@ -123,7 +123,7 @@ describe("ChartRenderer", () => {
 				const d = new Date(2023, 0, 1 + i).toISOString().split("T")[0];
 				return { date: d, count: (i + 1) * 10 };
 			});
-			const svg = renderSvgChart(denseData);
+			const svg = renderChart(denseData);
 			expect(svg).not.toContain('<g class="dots">');
 			expect(svg).not.toContain("<circle");
 			expect(svg).toContain(" C ");

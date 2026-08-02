@@ -7,7 +7,6 @@
  * - `fetchStarHistory`  — deep `StargazerFetcher` entry point (see `src/fetcher.ts`)
  * - `renderChart`       — deep `ChartRenderer` entry point (see `src/chart.ts`)
  * - `processStargazers` — internal time-series interpolator (re-exported for fuzz tests)
- * - `renderSvgChart`    — deprecated alias for `renderChart`
  *
  * The `run()` function below is the sole side-effectful orchestrator; it is never
  * called during testing (`NODE_ENV !== 'test'`).
@@ -20,12 +19,11 @@ import { fetchStarHistory } from "./fetcher.js";
 import {
 	renderChart,
 	processStargazers,
-	renderSvgChart,
 	type ChartOptions,
 	type RepositorySeries,
 } from "./chart.js";
 
-export { fetchStarHistory, renderChart, processStargazers, renderSvgChart };
+export { fetchStarHistory, renderChart, processStargazers };
 export type { ChartOptions, RepositorySeries };
 
 /**

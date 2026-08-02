@@ -553,9 +553,3 @@ export function renderChart(
   ${seriesMarkup}
 </svg>`;
 }
-
-/**
- * Backwards-compatibility alias for `renderChart`.
- * @deprecated Use `renderChart` directly.
- */
-export const renderSvgChart = renderChart;
