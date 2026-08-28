@@ -63,12 +63,12 @@
       <line x1="60" y1="40" x2="760" y2="40" class="grid" />
       <text x="50" y="44" class="text" text-anchor="end">10</text>
     </g>
-  <g class="labels"><text x="60" y="380" class="text" text-anchor="middle">2026-08-01</text><text x="760" y="380" class="text" text-anchor="middle">2026-08-27</text></g>
+  <g class="labels"><text x="60" y="380" class="text" text-anchor="middle">2026-08-01</text><text x="760" y="380" class="text" text-anchor="middle">2026-08-28</text></g>
   
       <g class="series-group series-0">
-        <path d="M 60 310 L 410 310 L 436.9230769230769 280 L 760 280 L 760 340 L 60 340 Z" fill="#0366d6" fill-opacity="0.08" class="area" />
-        <path d="M 60 310 L 410 310 L 436.9230769230769 280 L 760 280" stroke="#0366d6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="line line-anim" />
-        <g class="dots"><circle cx="60" cy="310" r="3" fill="#0366d6" class="dot" /><circle cx="410" cy="310" r="3" fill="#0366d6" class="dot" /><circle cx="436.9230769230769" cy="280" r="3" fill="#0366d6" class="dot" /><circle cx="760" cy="280" r="3" fill="#0366d6" class="dot" /></g>
+        <path d="M 60 310 L 397.037037037037 310 L 422.96296296296293 280 L 760 280 L 760 340 L 60 340 Z" fill="#0366d6" fill-opacity="0.08" class="area" />
+        <path d="M 60 310 L 397.037037037037 310 L 422.96296296296293 280 L 760 280" stroke="#0366d6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="line line-anim" />
+        <g class="dots"><circle cx="60" cy="310" r="3" fill="#0366d6" class="dot" /><circle cx="397.037037037037" cy="310" r="3" fill="#0366d6" class="dot" /><circle cx="422.96296296296293" cy="280" r="3" fill="#0366d6" class="dot" /><circle cx="760" cy="280" r="3" fill="#0366d6" class="dot" /></g>
       </g>
     
 </svg>
