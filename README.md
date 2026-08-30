@@ -33,8 +33,8 @@ This action runs directly inside your workflow using your repository's own `${{ 
 | **Runtime Dependencies**               |          **Zero**          |          Unknown           |           npm Packages           |     Puppeteer / sharp      |
 | **Multi-Repo Support**                 |        **Built-in**        |             ❌             |                ❌                |         ⚠️ Partial         |
 | **Git Safety**                         | **Commits SVG chart Only** |             ✅             |                ✅                |  ❌ Modifies `README.md`   |
-| **Custom Hex Theme Overrides**         |       ❌ _3 Presets_       |      ⚠️ Shadcn preset      |   ✅ **Full Color Overrides**    |     ❌ _Fixed Themes_      |
-| **Incremental State (`history.json`)** |  ❌ _On-the-fly REST API_  |     ⚠️ Cloud buffered      |   ✅ **Incremental JSON Log**    |  ❌ _On-the-fly REST API_  |
+| **Themes**                             |       ⚠️ _3 Themes_       |      ❌ Shadcn preset      |   ✅ **Full Color Overrides**    |     ⚠️ _Fixed Themes_      |
+| **Stateless** |  ✅  |     ⚠️ Cloud buffered      |   ❌ Incremental JSON Log    |  ✅   |
 
 ---
 
